@@ -1,8 +1,11 @@
-import { useState } from 'react'
-import './App.css'
+import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import ChatPage from './pages/Chat/ChatPage';
+import './App.css';
+import Navbar from './components/Navbar/Navbar';
 
 
-function App() {
+function Home() {
   const [backendMsg, setBackendMsg] = useState<string | null>(null);
 
   const testBackend = async () => {
@@ -17,17 +20,30 @@ function App() {
 
   return (
     <>
-      <h1>Vite + React</h1>
+      <h1>Equinox</h1>
       <div className="card">
-        <button style={{marginLeft: 8}} onClick={testBackend}>
+        <button style={{ marginLeft: 8 }} onClick={testBackend}>
           Test Backend Connection
         </button>
         {backendMsg && (
-          <p style={{marginTop: 10}}>Backend says: {backendMsg}</p>
+          <p style={{ marginTop: 10 }}>Backend says: {backendMsg}</p>
         )}
+     
       </div>
     </>
-  )
+  );
 }
 
-export default App
+function App() {
+  return (
+    <Router>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/chat" element={<ChatPage />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
