@@ -5,6 +5,41 @@ node_modules/
 yarn.lock
 package-lock.json
 
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+.mypy_cache/
+.pytest_cache/
+.coverage
+coverage/
+*.egg-info/
+dist/
+build/
+*.log
+*.sqlite3
+*.db
+*.pot
+*.mo
+*.pyo
+*.pyd
+*.pyc
+*.pkl
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
 # Build outputs
 dist/
 build/
@@ -17,6 +52,27 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# FastAPI/uvicorn
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.mypy_cache/
+backend/.pytest_cache/
+backend/.env
+backend/.venv/
+backend/venv/
+backend/ENV/
+backend/env/
+backend/env.bak/
+backend/venv.bak/
+backend/.coverage
+backend/coverage/
+backend/*.egg-info/
+backend/dist/
+backend/build/
+backend/.DS_Store
 
 # IDE and editor files
 .vscode/
