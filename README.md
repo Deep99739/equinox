@@ -9,7 +9,20 @@ A full-stack chat application with AI-powered responses using Groq's free LLM AP
 - Node.js 16+
 - Groq API key (get free at https://console.groq.com/keys)
 
-### 1. Setup Backend
+### One-command startup
+
+```bash
+# from repo root
+echo 'GROQ_API_KEY=your_groq_api_key_here' > backend/.env
+chmod +x startup.sh
+./startup.sh
+```
+
+The script installs backend/frontend dependencies and starts both servers (backend on 8000, frontend on 5173). Press Ctrl+C to stop.
+
+### Manual setup (optional)
+
+#### 1. Setup Backend
 
 ```bash
 cd backend
@@ -24,7 +37,7 @@ echo 'GROQ_API_KEY=your_groq_api_key_here' > .env
 python3 -m uvicorn main:app --reload
 ```
 
-### 2. Setup Frontend
+#### 2. Setup Frontend
 
 ```bash
 cd frontend
@@ -36,7 +49,7 @@ npm install
 npm run dev
 ```
 
-### 3. Access the Application
+### Access the Application
 
 - **Chat App**: http://localhost:5173
 - **API Docs**: http://localhost:8000/docs (Swagger UI)
