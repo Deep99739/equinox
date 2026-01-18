@@ -16,11 +16,15 @@ body, html, #root {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1rem;
-  position: sticky;
-  background-color: rgba(48, 48, 63, 0.315);
+  padding: 1rem 2rem;
+  position: fixed;
+  background: rgba(13, 13, 15, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
   top: 0;
   z-index: 2000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .navbar-title {
@@ -28,11 +32,21 @@ body, html, #root {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 1px;
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: transform 0.2s;
+}
+
+.navbar-title:hover {
+  transform: scale(1.02);
 }
 
 .navbar-links {
   display: flex;
-  gap: 1.5rem;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .navbar-link {
@@ -40,22 +54,81 @@ body, html, #root {
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
-  transition: color 0.2s;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.navbar-link::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: -1;
 }
 
 .navbar-link:hover {
-  color: #aee6ff;
+  color: #a78bfa;
+  background-color: rgba(139, 92, 246, 0.1);
+  transform: translateY(-2px);
 }
 
-@media (max-width: 600px) {
+.navbar-link:hover::before {
+  opacity: 1;
+}
+
+.navbar-link:active {
+  transform: translateY(0);
+}
+
+/* Active link style - add this class via React Router */
+.navbar-link.active {
+  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.15);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
   .navbar {
-    padding: 0 1rem;
-    height: 52px;
+    padding: 0.75rem 1rem;
   }
+  
+  .navbar-title {
+    font-size: 1.2rem;
+  }
+  
+  .navbar-links {
+    gap: 0.25rem;
+  }
+  
+  .navbar-link {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+  
   .navbar-title {
     font-size: 1.1rem;
   }
+  
   .navbar-links {
-    gap: 1rem;
+    gap: 0.15rem;
+  }
+  
+  .navbar-link {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.7rem;
   }
 }

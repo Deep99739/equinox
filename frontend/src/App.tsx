@@ -3,42 +3,15 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ChatPage from './pages/Chat/ChatPage';
 import './App.css';
 import Navbar from './components/Navbar/Navbar';
+import HomePage from './pages/Home/HomePage';
 
-function Home() {
-  const [backendMsg, setBackendMsg] = useState<string | null>(null);
-  const PORT = import.meta.env.VITE_BACKEND_PORT || '8000';
-  const testBackend = async () => {
-    try {
-      const res = await fetch(`http://localhost:${PORT}/ping`);
-      const data = await res.json();
-      setBackendMsg(data.message);
-    } catch (err) {
-      setBackendMsg('Error connecting to backend');
-    }
-  };
-
-  return (
-    <>
-      <h1>Equinox</h1>
-      <div className="card">
-        <button style={{ marginLeft: 8 }} onClick={testBackend}>
-          Test Backend Connection
-        </button>
-        {backendMsg && (
-          <p style={{ marginTop: 10 }}>Backend says: {backendMsg}</p>
-        )}
-     
-      </div>
-    </>
-  );
-}
 
 function App() {
   return (
     <Router>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/chat" element={<ChatPage />} />
       </Routes>
     </Router>
