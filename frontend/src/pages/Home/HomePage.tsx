@@ -8,8 +8,7 @@ export default function HomePage() {
         <div className="hero-section">
           <h1 className="hero-title">Equinox</h1>
           <p className="hero-subtitle">
-            Connect specialized AI agents that work together to solve complex problems through
-            collaborative intelligence.
+            Connect specialized AI agents that work together to help you be productive.
           </p>
           <div className="hero-buttons">
             <button className="primary-cta">Experience Multi-Agent Chat</button>
