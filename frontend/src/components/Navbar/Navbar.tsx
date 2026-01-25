@@ -10,6 +10,7 @@ export default function Navbar() {
                 <Link className="navbar-link" to="/">Home</Link>
                 <Link className="navbar-link" to="/chat">Chat</Link>
                 <Link className="navbar-link" to="/agents">Agents</Link>
+                <Link className="navbar-link" to="/settings">Settings</Link>
             </div>
         </nav>
     );

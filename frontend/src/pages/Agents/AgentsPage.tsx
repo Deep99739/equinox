@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import './AgentsPage.css';
-import { ProductivityAgent } from './Agent/ProductivityAgent';
-import { WellnessAgent } from './Agent/WellnessAgent';
-import { BriefingAgent } from './Agent/BriefingAgent';
+import { ProductivityAgent } from './ProductivityAgent/ProductivityAgent';
+import { WellnessAgent } from './WellnessAgent/WellnessAgent';
+import { BriefingAgent } from './BriefingAgent/BriefingAgent';
+import SupervisorAgent from './SupervisorAgent/SupervisorAgent';
+
 
 // Example agent type - adjust based on your actual agent files
 interface Agent {
@@ -24,7 +26,7 @@ export default function AgentsPage() {
 
   // Import your agent data from separate files
   const agents = [ProductivityAgent, WellnessAgent, BriefingAgent];
-  
+
   const openModal = (agent: Agent) => {
     setSelectedAgent(agent);
   };
@@ -42,8 +44,11 @@ export default function AgentsPage() {
         </p>
       </div>
 
+      {/* Render SupervisorAgent as an interactive card at the top */}
+      <SupervisorAgent />
+
       <div className="agents-grid">
-        {agents.map((agent) => (
+        {agents.filter(agent => agent.id !== 'supervisor').map((agent) => (
           <div
             key={agent.id}
             className={`agent-card`}
@@ -64,7 +69,7 @@ export default function AgentsPage() {
           </div>
         ))}
       </div>
- 
+
       {/* Modal */}
       {selectedAgent && (
         <div className="modal-overlay" onClick={closeModal}>

@@ -1,5 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import './ChatPage.css';
+import { sendChatMessage } from '../../api/chatApi';
 
 export default function ChatInterface() {
     const [messages, setMessages] = useState<{ text: string; sender: string; id: number }[]>([]);
@@ -22,17 +24,7 @@ export default function ChatInterface() {
         setInput('');
 
         try {
-            const res = await fetch(`http://localhost:${PORT}/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: input })
-            });
-
-            if (!res.ok) {
-                throw new Error(`Request failed with status ${res.status}`);
-            }
-
-            const data = await res.json();
+            const data = await sendChatMessage(input, PORT);
             const replyText =
                 data && typeof (data as any).reply === 'string'
                     ? (data as any).reply
@@ -87,8 +79,8 @@ export default function ChatInterface() {
                         className="chat-input"
                         rows={1}
                     />
-                    <button 
-                        onClick={handleSubmit} 
+                    <button
+                        onClick={handleSubmit}
                         className="send-button"
                         disabled={!input.trim()}
                     >
@@ -99,7 +91,7 @@ export default function ChatInterface() {
                 </div>
                 <div className="input-footer">
                     <button className="footer-button">
-                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <circle cx="12" cy="12" r="10" />
                             <path d="M8 12l2 2 4-4" />
                         </svg>
