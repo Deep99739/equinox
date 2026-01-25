@@ -122,3 +122,6 @@ coverage/
 .cache/
 dist-ssr/
 *.local
+
+# Google OAuth client secret
+backend/tools/client_secret.json

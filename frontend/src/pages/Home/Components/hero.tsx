@@ -39,7 +39,7 @@ export function Hero() {
 
         {/* Social proof */}
         <div className="hero__social-proof">
-          <p className="hero__social-proof-text">Built with [:heart] for Encode AI: Commit to Change </p>
+          <p className="hero__social-proof-text">Built with ❤️ for Encode AI: Commit to Change </p>
           <div className="hero__social-proof-items">
             {["Deepak", "Mainak", "Abhayjit"].map((item) => (
               <span key={item} className="hero__social-proof-item">{item}</span>
