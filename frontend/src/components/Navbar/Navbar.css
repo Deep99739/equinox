@@ -1,134 +1,124 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body, html, #root {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-.navbar {
-  width: 100vw;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
-  position: fixed;
-  background: rgba(13, 13, 15, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
-  top: 0;
-  z-index: 2000;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.navbar-title {
-  color: #fff;
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  transition: transform 0.2s;
-}
-
-.navbar-title:hover {
-  transform: scale(1.02);
-}
-
-.navbar-links {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.navbar-link {
-  color: #e0e0e0;
-  text-decoration: none;
+/* Sign In Button Styling */
+.btn.btn--ghost.btn--left {
+  background: white;
+  color: black;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.5rem;
   font-size: 1rem;
-  font-weight: 500;
-  padding: 0.6rem 1.2rem;
-  border-radius: 0.5rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(79, 140, 255, 0.08);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  outline: none;
 }
 
-.navbar-link::before {
-  content: '';
-  position: absolute;
+.btn.btn--ghost.btn--left:hover,
+.btn.btn--ghost.btn--left:focus {
+  box-shadow: 0 4px 16px rgba(79, 140, 255, 0.16);
+  transform: translateY(-2px) scale(1.03);
+}
+
+/* Navbar Container */
+.navbar {
+  position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: -1;
+  right: 0;
+  z-index: 50;
+  background-color: rgba(17, 17, 17, 0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
 }
 
-.navbar-link:hover {
-  color: #a78bfa;
-  background-color: rgba(139, 92, 246, 0.1);
-  transform: translateY(-2px);
+.navbar__inner {
+  display: flex;
+  align-items: center;
+  height: 64px;
 }
 
-.navbar-link:hover::before {
-  opacity: 1;
+/* Desktop Links */
+.navbar__links {
+  display: none;
+  align-items: center;
+  gap: 2rem;
 }
 
-.navbar-link:active {
-  transform: translateY(0);
+.navbar__link {
+  color: var(--muted-foreground);
+  transition: color 0.2s ease;
 }
 
-/* Active link style - add this class via React Router */
-.navbar-link.active {
-  color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.15);
-  font-weight: 600;
+.navbar__link:hover {
+  color: var(--foreground);
 }
 
-@media (max-width: 768px) {
-  .navbar {
-    padding: 0.75rem 1rem;
-  }
-  
-  .navbar-title {
-    font-size: 1.2rem;
-  }
-  
-  .navbar-links {
-    gap: 0.25rem;
-  }
-  
-  .navbar-link {
-    font-size: 0.9rem;
-    padding: 0.5rem 0.9rem;
-  }
+/* Desktop CTA (Sign In Button) */
+.navbar__cta {
+  display: none;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto; 
 }
 
-@media (max-width: 480px) {
-  .navbar {
-    padding: 0.5rem 1rem;
+/* Mobile Toggle */
+.navbar__mobile-toggle {
+  display: block;
+  margin-left: auto;
+  padding: 0.5rem;
+  color: var(--muted-foreground);
+}
+
+.navbar__mobile-toggle:hover {
+  color: var(--foreground);
+}
+
+/* Mobile Menu */
+.navbar__mobile-menu {
+  display: block;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.navbar__mobile-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.navbar__mobile-link {
+  color: var(--muted-foreground);
+  padding: 0.5rem 0;
+  transition: color 0.2s ease;
+}
+
+.navbar__mobile-link:hover {
+  color: var(--foreground);
+}
+
+.navbar__mobile-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Desktop Breakpoint */
+@media (min-width: 768px) {
+  .navbar__links {
+    display: flex;
   }
-  
-  .navbar-title {
-    font-size: 1.1rem;
+
+  .navbar__cta {
+    display: flex;
   }
-  
-  .navbar-links {
-    gap: 0.15rem;
+
+  .navbar__mobile-toggle {
+    display: none;
   }
-  
-  .navbar-link {
-    font-size: 0.85rem;
-    padding: 0.4rem 0.7rem;
+
+  .navbar__mobile-menu {
+    display: none;
   }
 }
