@@ -31,10 +31,9 @@ export default function ChatInterface() {
 
         try {
             const data = await sendChatMessage(input, PORT);
+            // handle both wellness (response) and supervisor (summary) formats
             const replyText =
-                data && typeof (data as any).reply === 'string'
-                    ? (data as any).reply
-                    : 'Unexpected response from AI';
+                data?.response || data?.summary || data?.reply || 'Unexpected response from AI';
 
             setMessages(prev => [...prev, { text: replyText, sender: 'bot', id: Date.now() }]);
         } catch {

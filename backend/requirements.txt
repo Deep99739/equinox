@@ -1,4 +1,24 @@
+# Core
 fastapi
 uvicorn
-groq
 python-dotenv
+
+# Database
+sqlalchemy
+psycopg2-binary
+
+# Vector Database
+pinecone
+
+# AI/LLM
+groq
+langgraph
+langchain
+langchain-groq
+
+# Validation
+pydantic
+email-validator
+
+# Utilities
+httpx
