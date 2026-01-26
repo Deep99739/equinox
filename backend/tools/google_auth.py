@@ -8,8 +8,8 @@ from state.user_tokens import save_user_tokens
 
 router = APIRouter()
 
-# Hardcode the absolute path for quick test
-client_secret_path = "/Users/abhayjitsinghgulati/Desktop/Hackathon/Encode_hack/backend/tools/client_secret.json"
+# use client_secret.json from the same directory as this file
+client_secret_path = os.path.join(os.path.dirname(__file__), "client_secret.json")
 print("Using client_secret_path:", client_secret_path)
 
 @router.get("/auth/google/login")
