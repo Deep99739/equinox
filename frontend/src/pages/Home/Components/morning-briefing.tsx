@@ -1,6 +1,8 @@
 import { Sun, Mail, Calendar, Moon, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { handleGoogleSignIn } from "../../../api/authApi";
 
-export function MorningBriefing() {
+export function MorningBriefing({ signedIn }: { signedIn: boolean }) {
   return (
     <section id="briefing" className="morning-briefing">
       <div className="container">
@@ -80,10 +82,17 @@ export function MorningBriefing() {
               </div>
 
               {/* Action */}
-              <button type="button" className="briefing-card__button">
-                View Full Briefing
-                <ArrowRight className="briefing-card__button-icon" />
-              </button>
+              {signedIn ? (
+                <Link to="/briefing" className="briefing-card__button">
+                  View Full Briefing
+                  <ArrowRight className="briefing-card__button-icon" />
+                </Link>
+              ) : (
+                <button type="button" className="briefing-card__button" onClick={handleGoogleSignIn}>
+                  Sign In to View Briefing
+                  <ArrowRight className="briefing-card__button-icon" />
+                </button>
+              )}
             </div>
           </div>
         </div>

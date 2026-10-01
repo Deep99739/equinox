@@ -13,12 +13,13 @@ import { Contact } from './pages/Contact/Contact';
 import BriefingPage from './pages/Briefing/BriefingPage';
 import HealthLogPopup from './components/HealthLogPopup/HealthLogPopup';
 import { getTodayHealth } from './api/healthApi';
-import { fetchSession } from './api/authApi';
+import { fetchSession, SessionUnauthenticatedError } from './api/authApi';
 import { clearAuth, setAuth } from './utils/authUtils';
 
 function ProtectedLayout() {
   const location = useLocation();
-  const [session, setSession] = useState<'checking' | 'ready' | 'signed_out'>('checking');
+  const [session, setSession] = useState<'checking' | 'ready' | 'signed_out' | 'unavailable'>('checking');
+  const [sessionAttempt, setSessionAttempt] = useState(0);
   const [showHealthPopup, setShowHealthPopup] = useState(false);
   const [healthChecked, setHealthChecked] = useState(false);
 
@@ -30,13 +31,17 @@ function ProtectedLayout() {
         setAuth(email);
         setSession('ready');
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (cancelled) return;
-        clearAuth();
-        setSession('signed_out');
+        if (error instanceof SessionUnauthenticatedError) {
+          clearAuth();
+          setSession('signed_out');
+        } else {
+          setSession('unavailable');
+        }
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [sessionAttempt]);
 
   useEffect(() => {
     if (session !== 'ready' || location.pathname === '/wellness' || healthChecked) return;
@@ -65,6 +70,17 @@ function ProtectedLayout() {
 
   if (session === 'signed_out') return <Navigate to="/" replace />;
   if (session === 'checking') return null;
+  if (session === 'unavailable') {
+    return (
+      <main className="session-unavailable" role="alert">
+        <p>Could not check your sign-in. Your session may still be active.</p>
+        <button type="button" onClick={() => {
+          setSession('checking');
+          setSessionAttempt(attempt => attempt + 1);
+        }}>Retry</button>
+      </main>
+    );
+  }
 
   return (
     <>

@@ -865,6 +865,7 @@
   font-size: var(--text-callout);
   font-weight: var(--font-weight-medium);
   color: #ffffff;
+  text-decoration: none;
   background: linear-gradient(135deg, var(--color-accent) 0%, #F59E0B 100%);
   border: none;
   border-radius: 12px;

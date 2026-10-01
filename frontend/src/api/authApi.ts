@@ -7,9 +7,17 @@ export async function handleGoogleSignIn() {
   window.location.href = `${API_URL}/auth/google/login`;
 }
 
+export class SessionUnauthenticatedError extends Error {
+  constructor() {
+    super('No active session');
+    this.name = 'SessionUnauthenticatedError';
+  }
+}
+
 export async function fetchSession(): Promise<{ email: string }> {
   const res = await apiFetch(`${API_URL}/auth/session`);
-  if (!res.ok) throw new Error('No active session');
+  if (res.status === 401) throw new SessionUnauthenticatedError();
+  if (!res.ok) throw new Error('Could not check session');
   return res.json();
 }
 
