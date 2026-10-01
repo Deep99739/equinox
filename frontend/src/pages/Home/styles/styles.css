@@ -142,6 +142,12 @@
   font-size: var(--text-body);
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
 .icon--md {
   width: 18px;
   height: 18px;
@@ -877,6 +883,13 @@
 .briefing-card__button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(255, 107, 53, 0.35);
+}
+
+.briefing-card__button:disabled,
+.briefing-card__button:disabled:hover {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
 }
 
 .briefing-card__button-icon {

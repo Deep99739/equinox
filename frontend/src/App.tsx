@@ -13,12 +13,12 @@ import { Contact } from './pages/Contact/Contact';
 import BriefingPage from './pages/Briefing/BriefingPage';
 import HealthLogPopup from './components/HealthLogPopup/HealthLogPopup';
 import { getTodayHealth } from './api/healthApi';
-import { fetchSession, SessionUnauthenticatedError } from './api/authApi';
+import { fetchSession, SessionUnauthenticatedError, type SessionStatus } from './api/authApi';
 import { clearAuth, setAuth } from './utils/authUtils';
 
 function ProtectedLayout() {
   const location = useLocation();
-  const [session, setSession] = useState<'checking' | 'ready' | 'signed_out' | 'unavailable'>('checking');
+  const [session, setSession] = useState<SessionStatus>('checking');
   const [sessionAttempt, setSessionAttempt] = useState(0);
   const [showHealthPopup, setShowHealthPopup] = useState(false);
   const [healthChecked, setHealthChecked] = useState(false);
@@ -69,7 +69,9 @@ function ProtectedLayout() {
   };
 
   if (session === 'signed_out') return <Navigate to="/" replace />;
-  if (session === 'checking') return null;
+  if (session === 'checking') {
+    return <main className="session-unavailable" role="status">Checking your sign-in...</main>;
+  }
   if (session === 'unavailable') {
     return (
       <main className="session-unavailable" role="alert">
