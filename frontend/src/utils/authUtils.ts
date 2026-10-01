@@ -1,4 +1,5 @@
 // Auth utility functions for consistent session management
+import { logout } from '../api/authApi';
 
 export const isAuthenticated = (): boolean => {
     return localStorage.getItem('signedIn') === 'true';
@@ -16,4 +17,16 @@ export const setAuth = (email: string): void => {
 export const clearAuth = (): void => {
     localStorage.removeItem('signedIn');
     localStorage.removeItem('user_email');
+};
+
+export const signOut = async (): Promise<void> => {
+    try {
+        await logout();
+    } catch (error) {
+        console.error('Sign-out failed', error);
+        window.alert('Could not sign out. Please try again.');
+        return;
+    }
+    clearAuth();
+    window.location.href = '/';
 };

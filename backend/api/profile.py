@@ -1,24 +1,26 @@
 # profile api endpoints
 
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db, User, UserProfile
 from schemas import UserProfileCreate, UserProfileUpdate, UserProfileResponse, UserResponse
+from auth import get_current_email, require_owner
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
-# hardcoded test user - will add auth later
-TEST_USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+def current_user(db: Session, email: str):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 @router.get("/", response_model=UserProfileResponse)
-def get_profile(db: Session = Depends(get_db)):
+def get_profile(db: Session = Depends(get_db), email: str = Depends(get_current_email)):
     """get user profile"""
     
-    user_id = UUID(TEST_USER_ID)
+    user_id = current_user(db, email).id
     
     profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
     
@@ -29,10 +31,11 @@ def get_profile(db: Session = Depends(get_db)):
 
 
 @router.put("/", response_model=UserProfileResponse)
-def update_profile(data: UserProfileUpdate, db: Session = Depends(get_db)):
+def update_profile(data: UserProfileUpdate, db: Session = Depends(get_db),
+                   email: str = Depends(get_current_email)):
     """update user profile"""
     
-    user_id = UUID(TEST_USER_ID)
+    user_id = current_user(db, email).id
     
     profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
     
@@ -49,17 +52,10 @@ def update_profile(data: UserProfileUpdate, db: Session = Depends(get_db)):
 
 
 @router.get("/user", response_model=UserResponse)
-def get_user(email: str | None = None, db: Session = Depends(get_db)):
+def get_user(email: str | None = None, db: Session = Depends(get_db),
+             current_email: str = Depends(get_current_email)):
     """get basic user info"""
     
     if email:
-        user = db.query(User).filter(User.email == email).first()
-    else:
-        # Fallback to test user if no email provided (for dev compatibility)
-        user_id = UUID(TEST_USER_ID)
-        user = db.query(User).filter(User.id == user_id).first()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="user not found")
-    
-    return user
+        require_owner(email, current_email)
+    return current_user(db, current_email)

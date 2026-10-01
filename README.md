@@ -102,6 +102,10 @@ cd equinox
 # Configure environment
 cp backend/.env.example backend/.env
 # Edit backend/.env with your API keys
+# Set SESSION_SECRET to a long random value (for example, python -c "import secrets; print(secrets.token_urlsafe(48))")
+# Set FRONTEND_URL and GOOGLE_REDIRECT_URI to the URLs of your frontend and OAuth callback
+# Initialize the PostgreSQL schema with the same URL used in backend/.env:
+psql 'postgresql://user:pass@localhost:5432/equinox' -f backend/database/init.sql
 
 # Run everything
 chmod +x startup.sh
@@ -116,6 +120,9 @@ Create `backend/.env`:
 # Required
 GROQ_API_KEY=your_groq_api_key
 DATABASE_URL=postgresql://user:pass@localhost:5432/equinox
+SESSION_SECRET=replace_with_a_long_random_secret
+FRONTEND_URL=http://localhost:5173
+GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
 
 # Opik Observability (Required for tracing)
 OPIK_API_KEY=your_opik_api_key
@@ -125,7 +132,16 @@ OPIK_PROJECT_NAME=equinox
 # Google OAuth (for Gmail & Tasks)
 GOOGLE_CLIENT_ID=your_client_id
 GOOGLE_CLIENT_SECRET=your_client_secret
+
+# Optional: only needed for semantic memory features
+PINECONE_API_KEY=your_pinecone_api_key
 ```
+
+For the frontend, copy `frontend/.env.example` to `frontend/.env` and set
+`VITE_API_URL` to the backend's public base URL when deploying. Configure
+`FRONTEND_URL` on the backend to that frontend's exact origin. Google OAuth
+must use `GOOGLE_REDIRECT_URI` as an authorized callback URL. Existing users
+will need to sign in again after enabling session cookies.
 
 ---
 

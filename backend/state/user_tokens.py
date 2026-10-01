@@ -11,9 +11,6 @@ user_tokens_store = {}
 def save_user_tokens(user_email: str, tokens: dict):
     """Save tokens to both memory cache and database"""
     user_email = user_email.lower()
-    # Update memory cache
-    user_tokens_store[user_email] = tokens
-    
     # Persist to database
     session = SessionLocal()
     try:
@@ -42,9 +39,10 @@ def save_user_tokens(user_email: str, tokens: dict):
             session.add(new_token)
         
         session.commit()
+        user_tokens_store[user_email] = tokens
     except Exception as e:
         session.rollback()
-        print(f"Error saving tokens to database: {e}")
+        raise RuntimeError("Could not save Google credentials") from e
     finally:
         session.close()
 

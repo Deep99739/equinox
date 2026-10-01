@@ -122,7 +122,10 @@ def chat_with_wellness_agent(user_id: str, message: str) -> str:
     
     # run the graph
     opik_tracer = OpikTracer(project_name="equinox")
-    result = agent.invoke(initial_state, config={"callbacks": [opik_tracer]})
+    result = agent.invoke(initial_state, config={
+        "callbacks": [opik_tracer],
+        "configurable": {"user_id": user_id},
+    })
     
     # extract response
     last_message = result["messages"][-1]

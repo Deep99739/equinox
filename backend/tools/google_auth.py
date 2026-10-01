@@ -1,14 +1,15 @@
 import os
 import requests
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from sqlalchemy.orm import Session
 
-from database import get_db, User
-from state.user_tokens import save_user_tokens
+from database import get_db, User, UserProfile
+from auth import get_current_email
+from state.user_tokens import save_user_tokens, get_user_tokens
 
 router = APIRouter()
 
@@ -18,7 +19,9 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
 
 # Frontend URL for redirect after auth
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+if REDIRECT_URI.startswith(("http://localhost:", "http://127.0.0.1:")):
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 SCOPES = [
     "openid",
@@ -45,20 +48,24 @@ def get_oauth_flow():
 
 
 @router.get("/auth/google/login")
-def google_login():
+def google_login(request: Request):
     flow = get_oauth_flow()
 
-    auth_url, _ = flow.authorization_url(
+    auth_url, state = flow.authorization_url(
         access_type="offline",
         prompt="consent",
         include_granted_scopes="true",
     )
+    request.session["oauth_state"] = state
 
-    return {"auth_url": auth_url}
+    return RedirectResponse(auth_url)
 
 
 @router.get("/auth/google/callback")
 def google_callback(request: Request, db: Session = Depends(get_db)):
+    expected_state = request.session.pop("oauth_state", None)
+    if not expected_state or request.query_params.get("state") != expected_state:
+        return RedirectResponse(f"{FRONTEND_URL}?error=auth_failed")
     flow = get_oauth_flow()
 
     try:
@@ -66,7 +73,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
             authorization_response=str(request.url),
             include_granted_scopes=False  # Don't require all scopes
         )
-    except Exception as e:
+    except Exception:
         # Handle invalid_grant or other OAuth errors
         return RedirectResponse(f"{FRONTEND_URL}?error=auth_failed")
     
@@ -90,14 +97,17 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     if not user:
         user = User(
             email=google_email,
-            name=name,
+            name=name or google_email.split("@")[0],
             avatar_url=avatar_url,
         )
         db.add(user)
     else:
-        user.name = name
+        user.name = name or user.name
         user.avatar_url = avatar_url
 
+    db.flush()
+    if not db.query(UserProfile).filter(UserProfile.user_id == user.id).first():
+        db.add(UserProfile(user_id=user.id))
     db.commit()
     db.refresh(user)
 
@@ -111,11 +121,33 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
         "scopes": credentials.scopes,
     }
 
+    if not tokens["refresh_token"]:
+        previous = get_user_tokens(google_email)
+        if previous:
+            tokens["refresh_token"] = previous.get("refresh_token")
     save_user_tokens(google_email, tokens)
+    request.session["email"] = google_email
 
     return RedirectResponse(
-        f"{FRONTEND_URL}/chat?email={google_email}"
+        f"{FRONTEND_URL}/chat"
     )
+
+
+@router.get("/auth/session")
+def auth_session(email: str = Depends(get_current_email)):
+    return {"email": email}
+
+
+@router.get("/auth/connections")
+def auth_connections(email: str = Depends(get_current_email)):
+    tokens = get_user_tokens(email)
+    return {"google": bool(tokens and tokens.get("refresh_token"))}
+
+
+@router.post("/auth/logout")
+def logout(request: Request):
+    request.session.clear()
+    return {"status": "signed_out"}
 
 
 # ---------- Gmail utilities ----------
@@ -238,4 +270,3 @@ def update_task(service, task_id: str, title: str = None, status: str = None, du
         task['due'] = due
         
     return service.tasks().update(tasklist=tasklist_id, task=task_id, body=task).execute()
-

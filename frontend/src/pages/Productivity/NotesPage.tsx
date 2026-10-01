@@ -3,7 +3,7 @@ import { fetchNotes, addNote, updateNote, deleteNote } from '../../api/notesApi'
 import { Trash2 } from 'lucide-react';
 import './NotesPage.css';
 import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
-import { getUserEmail, clearAuth } from '../../utils/authUtils';
+import { getUserEmail, signOut } from '../../utils/authUtils';
 
 interface Note {
     id: string;
@@ -19,22 +19,18 @@ export default function NotesPage() {
     const user_email = getUserEmail();
     const [notes, setNotes] = useState<Note[]>([]);
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(Boolean(user_email));
+    const [error, setError] = useState<string | null>(user_email ? null : 'No user email found');
     const saveTimeoutRef = useRef<number | null>(null);
+    const pendingSaveRef = useRef<{ id: string; updates: { title?: string; content?: string } } | null>(null);
 
     const handleSignOut = () => {
-        clearAuth();
-        window.location.href = '/';
+        void signOut();
     };
 
     // Fetch notes on mount
     useEffect(() => {
-        if (!user_email) {
-            setError('No user email found');
-            setIsLoading(false);
-            return;
-        }
+        if (!user_email) return;
 
         fetchNotes(user_email)
             .then(data => {
@@ -51,26 +47,8 @@ export default function NotesPage() {
 
     const selectedNote = notes.find(n => n.id === selectedNoteId);
 
-    const handleNewNote = async () => {
+    const saveNote = useCallback(async (noteId: string, updates: { title?: string; content?: string }) => {
         try {
-            const newNote = await addNote({
-                user_email,
-                title: '',
-                content: '',
-                source: 'user',
-            });
-            setNotes([newNote, ...notes]);
-            setSelectedNoteId(newNote.id);
-        } catch (err) {
-            console.error('Failed to create note:', err);
-            setError('Failed to create note');
-        }
-    };
-
-    // Debounced save function
-    const saveNote = useCallback(async (noteId: string, updates: Partial<Note>) => {
-        try {
-            // Assuming you have an updateNote API function
             await updateNote(noteId, updates);
         } catch (err) {
             console.error('Failed to save note:', err);
@@ -78,9 +56,41 @@ export default function NotesPage() {
         }
     }, []);
 
+    const flushPendingSave = useCallback(() => {
+        if (saveTimeoutRef.current !== null) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+        const pending = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        if (pending) void saveNote(pending.id, pending.updates);
+    }, [saveNote]);
+
+    const handleNewNote = async () => {
+        flushPendingSave();
+        try {
+            const newNote = await addNote({
+                user_email,
+                title: '',
+                content: '',
+                source: 'user',
+            });
+            setNotes(prev => [newNote, ...prev]);
+            setSelectedNoteId(newNote.id);
+        } catch (err) {
+            console.error('Failed to create note:', err);
+            setError('Failed to create note');
+        }
+    };
+
     const handleDeleteNote = async (e: React.MouseEvent, noteId: string) => {
         e.stopPropagation();
         if (!window.confirm('Are you sure you want to delete this note?')) return;
+        if (pendingSaveRef.current?.id === noteId) {
+            pendingSaveRef.current = null;
+            if (saveTimeoutRef.current !== null) clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+        } else {
+            flushPendingSave();
+        }
 
         try {
             await deleteNote(noteId);
@@ -95,33 +105,27 @@ export default function NotesPage() {
         }
     };
 
-    const updateSelectedNote = (field: keyof Note, value: string) => {
+    const updateSelectedNote = (field: 'title' | 'content', value: string) => {
         if (!selectedNoteId) return;
 
-        // Update local state immediately
-        setNotes(notes.map(n =>
+        setNotes(prev => prev.map(n =>
             n.id === selectedNoteId ? { ...n, [field]: value } : n
         ));
 
-        // Clear existing timeout
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
+        if (pendingSaveRef.current && pendingSaveRef.current.id !== selectedNoteId) {
+            flushPendingSave();
         }
-
-        // Set new timeout to save after 500ms of no typing
-        saveTimeoutRef.current = setTimeout(() => {
-            saveNote(selectedNoteId, { [field]: value });
-        }, 500);
+        pendingSaveRef.current = {
+            id: selectedNoteId,
+            updates: { ...(pendingSaveRef.current?.updates ?? {}), [field]: value },
+        };
+        if (saveTimeoutRef.current !== null) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = window.setTimeout(flushPendingSave, 500);
     };
 
-    // Cleanup timeout on unmount
     useEffect(() => {
-        return () => {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-            }
-        };
-    }, []);
+        return () => flushPendingSave();
+    }, [flushPendingSave]);
 
     if (isLoading) {
         return (
@@ -150,7 +154,10 @@ export default function NotesPage() {
                             <div
                                 key={note.id}
                                 className={`note-item ${note.id === selectedNoteId ? 'active' : ''}`}
-                                onClick={() => setSelectedNoteId(note.id)}
+                                onClick={() => {
+                                    flushPendingSave();
+                                    setSelectedNoteId(note.id);
+                                }}
                             >
                                 <div className="note-header-row">
                                     <div className="note-title">{note.title || 'Untitled'}</div>

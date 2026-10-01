@@ -6,15 +6,14 @@ import { CTA } from "./Components/cta";
 import './styles/styles.css';
 import { Navbar } from '../../components/Navbar/Navbar';
 import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
-import { isAuthenticated, clearAuth } from '../../utils/authUtils';
+import { isAuthenticated, signOut } from '../../utils/authUtils';
 
 export default function Home() {
   const signedIn = isAuthenticated();
   // const signedIn = true; // FORCE SHOW NAVBAR FOR DEMO
 
   const handleSignOut = () => {
-    clearAuth();
-    window.location.href = '/';
+    void signOut();
   };
 
   return (

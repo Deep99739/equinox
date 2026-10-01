@@ -13,6 +13,13 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL not set - check your .env file")
 
+# SQLAlchemy 2.1 defaults postgresql:// to psycopg (v3), while this project
+# installs psycopg2-binary. Keep existing DATABASE_URL values working.
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+
 # connection pool settings for neon
 engine = create_engine(
     DATABASE_URL,

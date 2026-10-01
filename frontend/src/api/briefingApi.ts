@@ -1,3 +1,4 @@
+import { apiFetch } from './apiClient';
 /**
  * Morning Briefing API Client
  */
@@ -19,7 +20,7 @@ export interface EmailResponse {
 }
 
 export const generateBriefing = async (email: string): Promise<BriefingResponse> => {
-    const response = await fetch(`${API_URL}/api/briefing/generate`, {
+    const response = await apiFetch(`${API_URL}/api/briefing/generate`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -35,7 +36,7 @@ export const generateBriefing = async (email: string): Promise<BriefingResponse>
 };
 
 export const sendBriefingEmail = async (email: string): Promise<EmailResponse> => {
-    const response = await fetch(`${API_URL}/api/briefing/send-email`, {
+    const response = await apiFetch(`${API_URL}/api/briefing/send-email`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

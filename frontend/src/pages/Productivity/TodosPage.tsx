@@ -2,27 +2,21 @@ import { useEffect, useState } from 'react';
 import { fetchTodos, addTodo, updateTodo, deleteTodo, type Todo } from '../../api/todosApi';
 import './TodosPage.css';
 import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
-import { getUserEmail, clearAuth } from '../../utils/authUtils';
+import { getUserEmail, signOut } from '../../utils/authUtils';
 
 export default function TodosPage() {
     const user_email = getUserEmail();
     const [todos, setTodos] = useState<Todo[]>([]);
     const [newTodoText, setNewTodoText] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(Boolean(user_email));
+    const [error, setError] = useState<string | null>(user_email ? null : 'No user email found');
 
     const handleSignOut = () => {
-        clearAuth();
-        window.location.href = '/';
+        void signOut();
     };
 
-    const loadTodos = () => {
-        if (!user_email) {
-            setError('No user email found');
-            setIsLoading(false);
-            return;
-        }
-
+    useEffect(() => {
+        if (!user_email) return;
         fetchTodos(user_email)
             .then(data => {
                 setTodos(data);
@@ -33,10 +27,6 @@ export default function TodosPage() {
                 setError('Failed to load todos');
                 setIsLoading(false);
             });
-    };
-
-    useEffect(() => {
-        loadTodos();
     }, [user_email]);
 
     const handleAddTodo = async (e: React.FormEvent) => {

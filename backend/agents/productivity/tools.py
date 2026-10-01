@@ -2,6 +2,7 @@
 # productivity agent tools
 
 from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 from typing import Optional, List
 from datetime import datetime
 import uuid
@@ -25,15 +26,22 @@ from api.todos import (
 from tools import google_auth
 
 
+def session_email(config: RunnableConfig) -> str:
+    email = config.get("configurable", {}).get("user_email")
+    if not email:
+        raise ValueError("Authenticated user context is missing")
+    return email
+
+
 @tool
-def fetch_recent_emails(user_id: str) -> dict:
+def fetch_recent_emails(config: RunnableConfig) -> dict:
     """
     Fetch recent emails from Gmail.
     Useful for summarizing work or checking for missed messages.
     """
     from state.user_tokens import get_user_tokens
     
-    tokens = get_user_tokens(user_id)
+    tokens = get_user_tokens(session_email(config))
     if not tokens:
         return {"error": "No Google tokens found. User needs to sign in."}
         
@@ -44,13 +52,13 @@ def fetch_recent_emails(user_id: str) -> dict:
 # Notes Tools
 
 @tool
-def fetch_notes(user_email: str) -> dict:
+def fetch_notes(config: RunnableConfig) -> dict:
     """
     Fetch all notes for a specific user.
     """
     session = SessionLocal()
     try:
-        notes = get_user_notes_service(session, user_email)
+        notes = get_user_notes_service(session, session_email(config))
         # Serialize
         notes_list = [
             {
@@ -68,13 +76,13 @@ def fetch_notes(user_email: str) -> dict:
         session.close()
 
 @tool
-def create_note(user_email: str, title: str, content: str) -> dict:
+def create_note(title: str, content: str, config: RunnableConfig) -> dict:
     """
     Create a new note for the user. 
     """
     session = SessionLocal()
     try:
-        new_note = create_note_service(session, user_email, title, content, source='ai_agent')
+        new_note = create_note_service(session, session_email(config), title, content, source='ai_agent')
         return {
             "status": "success", 
             "note_id": str(new_note.id), 
@@ -86,7 +94,7 @@ def create_note(user_email: str, title: str, content: str) -> dict:
         session.close()
 
 @tool
-def delete_note(note_id: str) -> dict:
+def delete_note(note_id: str, config: RunnableConfig) -> dict:
     """
     Delete a note by its ID.
     """
@@ -98,7 +106,7 @@ def delete_note(note_id: str) -> dict:
         except ValueError:
             return {"error": "Invalid Note ID format."}
 
-        success = delete_note_service(session, n_uuid)
+        success = delete_note_service(session, n_uuid, session_email(config))
         if success:
              return {"status": "success", "message": "Note deleted."}
         else:
@@ -111,13 +119,13 @@ def delete_note(note_id: str) -> dict:
 # Todos Tools
 
 @tool
-def fetch_todos(user_email: str) -> dict:
+def fetch_todos(config: RunnableConfig) -> dict:
     """
     Fetch all todos for a specific user.
     """
     session = SessionLocal()
     try:
-        todos = get_todos_service(session, user_email)
+        todos = get_todos_service(session, session_email(config))
         # Convert Pydantic/SQLAlchemy objects to dicts
         # If todos are SQLAlchemy models, we need manual conversion or use Pydantic models if returned as such.
         # The service returns SQLAlchemy models with .id stringified.
@@ -137,7 +145,7 @@ def fetch_todos(user_email: str) -> dict:
         session.close()
 
 @tool
-def create_todo(user_email: str, text: str, due_date: Optional[str] = None) -> dict:
+def create_todo(text: str, config: RunnableConfig, due_date: Optional[str] = None) -> dict:
     """
     Create a new todo item.
     """
@@ -150,7 +158,7 @@ def create_todo(user_email: str, text: str, due_date: Optional[str] = None) -> d
             except ValueError:
                 return {"error": "Invalid date format. Use YYYY-MM-DD."}
 
-        new_todo = create_todo_service(session, user_email, text, parsed_date)
+        new_todo = create_todo_service(session, session_email(config), text, parsed_date)
         return {"status": "success", "todo_id": str(new_todo.id), "message": f"Todo '{text}' created."}
     except Exception as e:
         return {"error": str(e)}
@@ -158,13 +166,13 @@ def create_todo(user_email: str, text: str, due_date: Optional[str] = None) -> d
         session.close()
 
 @tool
-def delete_todo(todo_id: str) -> dict:
+def delete_todo(todo_id: str, config: RunnableConfig) -> dict:
     """
     Delete a todo by its ID.
     """
     session = SessionLocal()
     try:
-        success = delete_todo_service(session, todo_id)
+        success = delete_todo_service(session, todo_id, session_email(config))
         if success:
             return {"status": "success", "message": "Todo deleted."}
         else:
@@ -175,7 +183,7 @@ def delete_todo(todo_id: str) -> dict:
         session.close()
 
 @tool
-def update_todo(todo_id: str, completed: Optional[bool] = None, text: Optional[str] = None) -> dict:
+def update_todo(todo_id: str, config: RunnableConfig, completed: Optional[bool] = None, text: Optional[str] = None) -> dict:
     """
     Update a todo item. Can mark as complete/incomplete or update the text.
     Args:
@@ -187,7 +195,7 @@ def update_todo(todo_id: str, completed: Optional[bool] = None, text: Optional[s
     session = SessionLocal()
     try:
         updates = TodoUpdate(completed=completed, text=text)
-        updated = update_todo_service(session, todo_id, updates)
+        updated = update_todo_service(session, todo_id, updates, session_email(config))
         if updated:
             return {
                 "status": "success", 
@@ -211,17 +219,14 @@ def update_todo(todo_id: str, completed: Optional[bool] = None, text: Optional[s
 # Google Tasks Tools
 
 @tool
-def get_google_tasks(user_id: str) -> dict:
+def get_google_tasks(config: RunnableConfig) -> dict:
     """
     Get all tasks from Google Tasks.
     Use this to see the user's task list from Google.
     """
-    from state.user_tokens import get_user_tokens, user_tokens_store
+    from state.user_tokens import get_user_tokens
     
-    tokens = get_user_tokens(user_id)
-    if not tokens and user_tokens_store:
-        # Fallback to any available token for demo
-        tokens = next(iter(user_tokens_store.values()))
+    tokens = get_user_tokens(session_email(config))
     
     if not tokens:
         return {"error": "No Google tokens found. User needs to sign in."}
@@ -243,19 +248,16 @@ def get_google_tasks(user_id: str) -> dict:
 
 
 @tool
-def create_google_task(user_id: str, title: str, notes: Optional[str] = None) -> dict:
+def create_google_task(title: str, config: RunnableConfig, notes: Optional[str] = None) -> dict:
     """
     Create a new task in Google Tasks.
     Args:
-        user_id: The user's ID for token lookup
         title: The title of the task
         notes: Optional description/notes for the task
     """
-    from state.user_tokens import get_user_tokens, user_tokens_store
+    from state.user_tokens import get_user_tokens
     
-    tokens = get_user_tokens(user_id)
-    if not tokens and user_tokens_store:
-        tokens = next(iter(user_tokens_store.values()))
+    tokens = get_user_tokens(session_email(config))
     
     if not tokens:
         return {"error": "No Google tokens found. User needs to sign in."}
@@ -269,7 +271,7 @@ def create_google_task(user_id: str, title: str, notes: Optional[str] = None) ->
 
 
 @tool  
-def get_email_summary(user_id: str) -> dict:
+def get_email_summary(config: RunnableConfig) -> dict:
     """
     Get a summary of recent emails highlighting urgent items and action items.
     Use this when the user asks about their email priorities or what needs attention.
@@ -277,11 +279,9 @@ def get_email_summary(user_id: str) -> dict:
     import os
     from langchain_groq import ChatGroq
     from opik.integrations.langchain import OpikTracer
-    from state.user_tokens import get_user_tokens, user_tokens_store
+    from state.user_tokens import get_user_tokens
     
-    tokens = get_user_tokens(user_id)
-    if not tokens and user_tokens_store:
-        tokens = next(iter(user_tokens_store.values()))
+    tokens = get_user_tokens(session_email(config))
     
     if not tokens:
         return {"error": "No Google tokens found. User needs to sign in."}
@@ -339,4 +339,3 @@ PRODUCTIVITY_TOOLS = [
     create_google_task,
     get_email_summary
 ]
-

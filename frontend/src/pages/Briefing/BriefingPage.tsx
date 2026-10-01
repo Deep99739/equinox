@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getUserEmail, isAuthenticated, clearAuth } from '../../utils/authUtils';
+import { getUserEmail, isAuthenticated, signOut } from '../../utils/authUtils';
 import { generateBriefing, sendBriefingEmail, type BriefingResponse } from '../../api/briefingApi';
 import { fetchTodos, type Todo } from '../../api/todosApi';
 import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
@@ -21,8 +21,7 @@ export default function BriefingPage() {
     const isLoggedIn = isAuthenticated();
 
     const handleSignOut = () => {
-        clearAuth();
-        window.location.href = '/';
+        void signOut();
     };
 
     const handleGenerateBriefing = async () => {

@@ -3,12 +3,15 @@
 from datetime import date
 from uuid import UUID
 from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 
 from database import SessionLocal, HealthLog, UserProfile
 
-# TODO: Replace hardcoded user ID with actual authenticated user
-# For demo, using test user. In production, get user_id from auth/session
-TEST_USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+def session_user_id(config: RunnableConfig) -> UUID:
+    user_id = config.get("configurable", {}).get("user_id")
+    if not user_id:
+        raise ValueError("Authenticated user context is missing")
+    return UUID(str(user_id))
 
 
 def get_db_session():
@@ -16,10 +19,10 @@ def get_db_session():
 
 
 @tool
-def get_health_today() -> dict:
+def get_health_today(config: RunnableConfig) -> dict:
     """get today's health data. returns empty dict if not logged yet."""
     
-    user_id = UUID(TEST_USER_ID)
+    user_id = session_user_id(config)
     db = get_db_session()
     try:
         log = db.query(HealthLog).filter(
@@ -46,12 +49,12 @@ def get_health_today() -> dict:
 
 
 @tool
-def get_readiness_score() -> dict:
+def get_readiness_score(config: RunnableConfig) -> dict:
     """get today's readiness score with zone and suggestions"""
     
     from agents.wellness.algorithms import calculate_readiness, get_zone_recommendations
     
-    user_id = UUID(TEST_USER_ID)
+    user_id = session_user_id(config)
     db = get_db_session()
     try:
         log = db.query(HealthLog).filter(
@@ -88,12 +91,12 @@ def get_readiness_score() -> dict:
 
 
 @tool
-def get_sleep_debt_info() -> dict:
+def get_sleep_debt_info(config: RunnableConfig) -> dict:
     """calculate sleep debt from last 14 days of data"""
     
     from agents.wellness.algorithms import calculate_sleep_debt, get_sleep_recommendations
     
-    user_id = UUID(TEST_USER_ID)
+    user_id = session_user_id(config)
     db = get_db_session()
     try:
         logs = db.query(HealthLog).filter(
@@ -120,12 +123,12 @@ def get_sleep_debt_info() -> dict:
 
 
 @tool
-def get_wellness_trends(days: int = 7) -> dict:
+def get_wellness_trends(config: RunnableConfig, days: int = 7) -> dict:
     """analyze wellness trends over last N days (default 7)"""
     
     from agents.wellness.algorithms import analyze_trends
     
-    user_id = UUID(TEST_USER_ID)
+    user_id = session_user_id(config)
     db = get_db_session()
     try:
         logs = db.query(HealthLog).filter(

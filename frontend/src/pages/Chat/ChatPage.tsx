@@ -1,13 +1,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import './ChatPage.css';
 import { User, Sparkles } from 'lucide-react';
 import { sendChatMessage, saveThread, getThread } from '../../api/chatApi';
 import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { clearAuth, setAuth } from '../../utils/authUtils';
+import { signOut, setAuth } from '../../utils/authUtils';
+import { fetchSession } from '../../api/authApi';
 
 // Typing indicator component
 const TypingIndicator = () => (
@@ -29,13 +30,11 @@ const TypingIndicator = () => (
 
 export default function ChatInterface() {
     const { email: routeEmail, threadId } = useParams();
-    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
 
     // Sign out handler for navbar
     const handleSignOut = () => {
-        clearAuth();
-        window.location.href = '/';
+        void signOut();
     };
 
     const [messages, setMessages] = useState<{ text: string; sender: string; id: number }[]>([]);
@@ -45,45 +44,25 @@ export default function ChatInterface() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-    // Initial setup: Redirect to /chat/:email/:threadId if params missing
+    // The backend session is the authority for the account and route.
     useEffect(() => {
-        // If we have both, ensures local storage is synced
-        if (routeEmail && threadId) {
-            setAuth(routeEmail);
-
-
-            // Load thread whenever threadId changes
-            const PORT = import.meta.env.REACT_APP_BACKEND_PORT || '8000';
-            setMessages([]); // Clear previous messages while loading
-            getThread(routeEmail, threadId, PORT)
-                .then(data => {
-                    if (data && data.messages) {
-                        setMessages(data.messages);
-                    }
-                })
-                .catch(() => {
-                    // Thread doesn't exist yet, that's fine
-                });
-            return;
-        }
-
-        // If missing params, derive and redirect
-        const storedEmail = localStorage.getItem('user_email');
-        const queryEmail = searchParams.get('email');
-        const effectiveEmail = routeEmail || queryEmail || storedEmail;
-
-        if (effectiveEmail) {
-            // If email exists but threadId missing, create one and redirect
-            if (!threadId) {
-                // Generate a simple thread ID (timestamp + random) or just timestamp
-                const newThreadId = `t_${Date.now()}`;
-                navigate(`/chat/${effectiveEmail}/${newThreadId}`, { replace: true });
-            }
-        } else {
-            // No email found at all?? Maybe redirect home or stay here (empty state)
-            // For now, let's just wait for user to sign in
-        }
-    }, [routeEmail, threadId, navigate, searchParams]);
+        let cancelled = false;
+        fetchSession()
+            .then(async ({ email }) => {
+                if (cancelled) return;
+                setAuth(email);
+                if (!threadId || routeEmail !== email) {
+                    navigate(`/chat/${encodeURIComponent(email)}/${crypto.randomUUID()}`, { replace: true });
+                    return;
+                }
+                const data = await getThread(email, threadId).catch(() => null);
+                if (!cancelled) setMessages(data?.messages ?? []);
+            })
+            .catch(() => {
+                if (!cancelled) navigate('/', { replace: true });
+            });
+        return () => { cancelled = true; };
+    }, [routeEmail, threadId, navigate]);
 
     // Auto-resize textarea
     useEffect(() => {
@@ -104,8 +83,6 @@ export default function ChatInterface() {
 
     const handleSubmit = async () => {
         if (!input.trim()) return;
-        const PORT = import.meta.env.REACT_APP_BACKEND_PORT || '8000';
-
         // Use params or fallback
         const effectiveEmail = routeEmail || localStorage.getItem('user_email');
 
@@ -118,7 +95,7 @@ export default function ChatInterface() {
 
         try {
             // Pass threadId if available
-            const data = await sendChatMessage(input, PORT, 'supervisor', effectiveEmail, threadId);
+            const data = await sendChatMessage(input, 'supervisor', effectiveEmail, threadId);
             // handle both wellness (response) and supervisor (summary) formats
             const replyText =
                 data?.response || data?.summary || data?.reply || 'Unexpected response from AI';
@@ -130,7 +107,7 @@ export default function ChatInterface() {
 
             // Persist thread
             if (effectiveEmail && threadId) {
-                saveThread(effectiveEmail, threadId, finalMessages, "Conversation", PORT);
+                await saveThread(effectiveEmail, threadId, finalMessages, "Conversation");
             }
         } catch {
             const errorMsg = { text: 'Error connecting to AI', sender: 'bot', id: Date.now() + 1 };

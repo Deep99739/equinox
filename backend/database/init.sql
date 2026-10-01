@@ -328,6 +328,41 @@ CREATE TABLE IF NOT EXISTS notes (
 CREATE INDEX IF NOT EXISTS idx_notes_user_email ON notes(user_email);
 CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(user_email, created_at DESC);
 
+-- Tables used by the productivity, chat history, and OAuth routes.
+CREATE TABLE IF NOT EXISTS todos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_email TEXT NOT NULL,
+    text TEXT NOT NULL,
+    completed BOOLEAN DEFAULT FALSE,
+    due_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_todos_user_email ON todos(user_email);
+
+CREATE TABLE IF NOT EXISTS chat_threads (
+    id TEXT PRIMARY KEY,
+    user_email TEXT NOT NULL,
+    title TEXT DEFAULT 'New Conversation',
+    messages JSONB DEFAULT '[]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_chat_threads_user_email ON chat_threads(user_email);
+
+CREATE TABLE IF NOT EXISTS user_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_email TEXT NOT NULL UNIQUE,
+    access_token TEXT,
+    refresh_token TEXT,
+    token_uri TEXT,
+    client_id TEXT,
+    client_secret TEXT,
+    scopes JSONB DEFAULT '[]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_user_tokens_user_email ON user_tokens(user_email);
+
 -- Add auto-update trigger for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -337,5 +372,6 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_notes_updated_at ON notes;
 CREATE TRIGGER update_notes_updated_at BEFORE UPDATE ON notes
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

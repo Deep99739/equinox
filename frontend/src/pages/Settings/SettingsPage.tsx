@@ -2,23 +2,21 @@ import { useEffect, useState } from 'react';
 import './SettingsPage.css';
 import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
 import { fetchUserProfileByEmail } from '../../api/profileApi';
-import { getUserEmail, clearAuth } from '../../utils/authUtils';
+import { getUserEmail, signOut } from '../../utils/authUtils';
+import { fetchConnections, handleGoogleSignIn } from '../../api/authApi';
 
 export default function SettingsPage() {
     const userEmail = getUserEmail(); // Get email directly from localStorage
 
     const handleSignOut = () => {
-        clearAuth();
-        window.location.href = '/';
+        void signOut();
     };
 
-    const [googleConnected, setGoogleConnected] = useState(true);
-    const [outlookConnected, setOutlookConnected] = useState(false);
-    const [stravaConnected, setStravaConnected] = useState(false);
+    const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
 
     // Profile state
-    const [profile, setProfile] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState<{ name: string; email: string; avatar_url?: string } | null>(null);
+    const [loading, setLoading] = useState(Boolean(userEmail));
 
     useEffect(() => {
         if (userEmail) {
@@ -29,9 +27,14 @@ export default function SettingsPage() {
                     // Don't set error - we'll use localStorage email as fallback
                 })
                 .finally(() => setLoading(false));
-        } else {
-            setLoading(false);
         }
+    }, [userEmail]);
+
+    useEffect(() => {
+        if (!userEmail) return;
+        fetchConnections()
+            .then(({ google }) => setGoogleConnected(google))
+            .catch(() => setGoogleConnected(null));
     }, [userEmail]);
 
     // Extract name from email (before @) as fallback
@@ -69,40 +72,25 @@ export default function SettingsPage() {
                     )}
                 </div>
                 <div className="settingspage-content">
-                    <h1 className="settingspage-title">Apps Connected</h1>
+                    <h1 className="settingspage-title">Integrations</h1>
                     <div className="apps-list">
                         <div className="app-toggle">
                             <span className="app-name">Google</span>
-                            <label className="switch">
-                                <input
-                                    type="checkbox"
-                                    checked={googleConnected}
-                                    onChange={() => setGoogleConnected(!googleConnected)}
-                                />
-                                <span className="slider"></span>
-                            </label>
+                            {googleConnected === null ? (
+                                <span className="app-status">Status unavailable</span>
+                            ) : googleConnected ? (
+                                <span className="app-status">Connected</span>
+                            ) : (
+                                <button className="app-connect" onClick={handleGoogleSignIn}>Connect Google</button>
+                            )}
                         </div>
                         <div className="app-toggle">
                             <span className="app-name">Outlook</span>
-                            <label className="switch">
-                                <input
-                                    type="checkbox"
-                                    checked={outlookConnected}
-                                    onChange={() => setOutlookConnected(!outlookConnected)}
-                                />
-                                <span className="slider"></span>
-                            </label>
+                            <span className="app-status">Coming soon</span>
                         </div>
                         <div className="app-toggle">
                             <span className="app-name">Strava</span>
-                            <label className="switch">
-                                <input
-                                    type="checkbox"
-                                    checked={stravaConnected}
-                                    onChange={() => setStravaConnected(!stravaConnected)}
-                                />
-                                <span className="slider"></span>
-                            </label>
+                            <span className="app-status">Coming soon</span>
                         </div>
                     </div>
                 </div>
