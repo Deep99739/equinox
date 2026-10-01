@@ -1,8 +1,8 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-import { handleGoogleSignIn } from "../../../api/authApi";
+import { handleGoogleSignIn, type SessionStatus } from "../../../api/authApi";
 
-export function Hero({ signedIn }: { signedIn: boolean }) {
+export function Hero({ session }: { session: SessionStatus }) {
     return (
         <section className="hero">
             {/* High-resolution background image */}
@@ -36,15 +36,19 @@ export function Hero({ signedIn }: { signedIn: boolean }) {
 
                 {/* CTA Buttons */}
                 <div className="hero__buttons">
-                    {signedIn ? (
+                    {session === 'ready' ? (
                         <Link to="/chat" className="btn btn--primary btn--lg">
                             Open Equinox
                             <ArrowRight className="icon--md" />
                         </Link>
-                    ) : (
+                    ) : session === 'signed_out' ? (
                         <button type="button" className="btn btn--primary btn--lg" onClick={handleGoogleSignIn}>
                             Get Started Free
                             <ArrowRight className="icon--md" />
+                        </button>
+                    ) : (
+                        <button type="button" className="btn btn--primary btn--lg" disabled>
+                            {session === 'checking' ? 'Checking sign-in...' : 'Sign-in check unavailable'}
                         </button>
                     )}
                     <Link to="/contact" className="btn btn--outline btn--lg">

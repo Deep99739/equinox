@@ -7,11 +7,11 @@ import './styles/styles.css';
 import { Navbar } from '../../components/Navbar/Navbar';
 import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
 import { useEffect, useState } from 'react';
-import { fetchSession, SessionUnauthenticatedError } from '../../api/authApi';
+import { fetchSession, SessionUnauthenticatedError, type SessionStatus } from '../../api/authApi';
 import { clearAuth, setAuth, signOut } from '../../utils/authUtils';
 
 export default function Home() {
-  const [session, setSession] = useState<'checking' | 'ready' | 'signed_out' | 'unavailable'>('checking');
+  const [session, setSession] = useState<SessionStatus>('checking');
   const [sessionAttempt, setSessionAttempt] = useState(0);
 
   useEffect(() => {
@@ -47,6 +47,9 @@ export default function Home() {
       ) : session === 'signed_out' ? (
         <Navbar />
       ) : null}
+      {session === 'checking' && (
+        <div className="session-unavailable" role="status">Checking your sign-in...</div>
+      )}
       {session === 'unavailable' && (
         <div className="session-unavailable" role="alert">
           <p>Could not check your sign-in. Your session may still be active.</p>
@@ -57,11 +60,11 @@ export default function Home() {
         </div>
       )}
       <main className="min-h-screen bg-background">
-        <Hero signedIn={signedIn} />
+        <Hero session={session} />
         <Features />
         <HowItWorks />
-        <MorningBriefing signedIn={signedIn} />
-        <CTA signedIn={signedIn} />
+        <MorningBriefing session={session} />
+        <CTA session={session} />
         {/* <Footer /> */}
       </main>
     </>
