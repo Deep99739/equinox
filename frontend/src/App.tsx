@@ -1,129 +1,104 @@
-
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Navigate, Outlet, Routes, Route, useLocation } from 'react-router-dom';
-import ChatPage from './pages/Chat/ChatPage';
-import './App.css';
-import HomePage from './pages/Home/HomePage';
-import AgentsPage from './pages/Agents/AgentsPage';
-import SettingsPage from './pages/Settings/SettingsPage';
-import NotesPage from './pages/Productivity/NotesPage';
-import TodosPage from './pages/Productivity/TodosPage';
-import WellnessPage from './pages/Wellness/WellnessPage';
-import { Contact } from './pages/Contact/Contact';
-import BriefingPage from './pages/Briefing/BriefingPage';
-import HealthLogPopup from './components/HealthLogPopup/HealthLogPopup';
-import { getTodayHealth } from './api/healthApi';
-import { fetchSession, SessionUnauthenticatedError, type SessionStatus } from './api/authApi';
-import { clearAuth, setAuth } from './utils/authUtils';
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+} from "react-router-dom";
+import ChatPage from "./pages/Chat/ChatPage";
+import HomePage from "./pages/Home/HomePage";
+import AgentsPage from "./pages/Agents/AgentsPage";
+import SettingsPage from "./pages/Settings/SettingsPage";
+import NotesPage from "./pages/Productivity/NotesPage";
+import TodosPage from "./pages/Productivity/TodosPage";
+import WellnessPage from "./pages/Wellness/WellnessPage";
+import BriefingPage from "./pages/Briefing/BriefingPage";
+import TodayPage from "./pages/Today/TodayPage";
+import { Contact } from "./pages/Contact/Contact";
+import { AppShell } from "./components/AppShell/AppShell";
+import {
+  fetchSession,
+  SessionUnauthenticatedError,
+  type SessionStatus,
+} from "./api/authApi";
+import { clearAuth, setAuth } from "./utils/authUtils";
+import "./App.css";
 
 function ProtectedLayout() {
-  const location = useLocation();
-  const [session, setSession] = useState<SessionStatus>('checking');
-  const [sessionAttempt, setSessionAttempt] = useState(0);
-  const [showHealthPopup, setShowHealthPopup] = useState(false);
-  const [healthChecked, setHealthChecked] = useState(false);
+  const [session, setSession] = useState<SessionStatus>("checking");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
     fetchSession()
       .then(({ email }) => {
-        if (cancelled) return;
+        if (!active) return;
         setAuth(email);
-        setSession('ready');
+        setSession("ready");
       })
       .catch((error: unknown) => {
-        if (cancelled) return;
+        if (!active) return;
         if (error instanceof SessionUnauthenticatedError) {
           clearAuth();
-          setSession('signed_out');
-        } else {
-          setSession('unavailable');
-        }
+          setSession("signed_out");
+        } else setSession("unavailable");
       });
-    return () => { cancelled = true; };
-  }, [sessionAttempt]);
+    return () => {
+      active = false;
+    };
+  }, [attempt]);
 
-  useEffect(() => {
-    if (session !== 'ready' || location.pathname === '/wellness' || healthChecked) return;
-    let cancelled = false;
-    getTodayHealth()
-      .then(log => {
-        if (cancelled) return;
-        if (!log) setShowHealthPopup(true);
-        setHealthChecked(true);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setShowHealthPopup(true);
-        setHealthChecked(true);
-      });
-    return () => { cancelled = true; };
-  }, [location.pathname, healthChecked, session]);
-
-  const handlePopupClose = () => {
-    setShowHealthPopup(false);
-  };
-
-  const handleHealthLogged = () => {
-    setHealthChecked(true);
-  };
-
-  if (session === 'signed_out') return <Navigate to="/" replace />;
-  if (session === 'checking') {
-    return <main className="session-unavailable" role="status">Checking your sign-in...</main>;
-  }
-  if (session === 'unavailable') {
+  if (session === "signed_out") return <Navigate to="/" replace />;
+  if (session === "checking")
     return (
-      <main className="session-unavailable" role="alert">
-        <p>Could not check your sign-in. Your session may still be active.</p>
-        <button type="button" onClick={() => {
-          setSession('checking');
-          setSessionAttempt(attempt => attempt + 1);
-        }}>Retry</button>
+      <main className="session-state" role="status">
+        <span className="brand-mark" />
+        Checking your session…
       </main>
     );
-  }
-
+  if (session === "unavailable")
+    return (
+      <main className="session-state" role="alert">
+        <h1>We couldn’t check your session</h1>
+        <p>Your connection may be interrupted. Try again to continue.</p>
+        <button
+          className="button button-primary"
+          onClick={() => {
+            setSession("checking");
+            setAttempt((value) => value + 1);
+          }}
+        >
+          Try again
+        </button>
+      </main>
+    );
   return (
-    <>
+    <AppShell>
       <Outlet />
-
-      {showHealthPopup && (
-        <HealthLogPopup
-          onClose={handlePopupClose}
-          onLogged={handleHealthLogged}
-        />
-      )}
-    </>
+    </AppShell>
   );
 }
 
-function AppRoutes() {
+export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route element={<ProtectedLayout />}>
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:email/:threadId" element={<ChatPage />} />
-        <Route path="/agents" element={<AgentsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/notes" element={<NotesPage />} />
-        <Route path="/todos" element={<TodosPage />} />
-        <Route path="/wellness" element={<WellnessPage />} />
-        <Route path="/briefing" element={<BriefingPage />} />
-      </Route>
-    </Routes>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route element={<ProtectedLayout />}>
+          <Route path="/today" element={<TodayPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:email/:threadId" element={<ChatPage />} />
+          <Route path="/todos" element={<TodosPage />} />
+          <Route path="/notes" element={<NotesPage />} />
+          <Route path="/wellness" element={<WellnessPage />} />
+          <Route path="/briefing" element={<BriefingPage />} />
+          <Route path="/agents" element={<AgentsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-
-function App() {
-  return (
-    <Router>
-      <AppRoutes />
-    </Router>
-  );
-}
-
-export default App;
