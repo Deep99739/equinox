@@ -1,15 +1,20 @@
+from datetime import date
+
 from sqlalchemy.orm import Session
 from database import get_db, HealthLog, User
 from database.connection import SessionLocal
 
-def get_latest_health_log(user_email: str):
+def get_today_health_log(user_email: str):
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.email == user_email).first()
         if not user:
             return None
         
-        log = db.query(HealthLog).filter(HealthLog.user_id == user.id).order_by(HealthLog.date.desc()).first()
+        log = db.query(HealthLog).filter(
+            HealthLog.user_id == user.id,
+            HealthLog.date == date.today(),
+        ).first()
         if not log:
             return None
             

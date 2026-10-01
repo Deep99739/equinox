@@ -7,8 +7,9 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export interface BriefingResponse {
     greeting: string;
-    sleep_score: number;
-    critical_emails: number;
+    sleep_score: number | null;
+    unread_emails?: number;
+    critical_emails?: number;
     schedule_updated: boolean;
     tasks_count: number;
     summary: string;

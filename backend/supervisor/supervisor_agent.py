@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, END
 from pydantic import BaseModel, Field
+from llm_config import GROQ_MODEL
 
 from .state import SupervisorState
 from agents.wellness.agent import get_wellness_agent
@@ -36,7 +37,7 @@ def create_supervisor_graph():
     """create and return the supervisor graph"""
     
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model=GROQ_MODEL,
         temperature=0.1, # Low temp for precise routing
         api_key=os.getenv("GROQ_API_KEY")
     )

@@ -19,13 +19,13 @@ async def test():
         print("\n=== BRIEFING RESULT ===")
         print(f"Greeting: {result.get('greeting')}")
         print(f"Sleep Score: {result.get('sleep_score')}")
-        print(f"Critical Emails: {result.get('critical_emails')}")
+        print(f"Recent Unread Emails: {result.get('unread_emails')}")
         print(f"Tasks Count: {result.get('tasks_count')}")
         print(f"Schedule Updated: {result.get('schedule_updated')}")
         print(f"Summary: {result.get('summary')}")
         print("=======================")
         
-        if result.get('tasks_count') > 0 or result.get('critical_emails') > 0:
+        if result.get('tasks_count') > 0 or result.get('unread_emails') > 0:
              print("\nSUCCESS: Data retrieved!")
         else:
              print("\nWARNING: Counts are 0. (Might be valid if no data, but check debug output)")

@@ -24,6 +24,7 @@ from api.todos import (
 )
 
 from tools import google_auth
+from llm_config import GROQ_MODEL
 
 
 def session_email(config: RunnableConfig) -> str:
@@ -304,7 +305,7 @@ def get_email_summary(config: RunnableConfig) -> dict:
         ])
         
         llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             temperature=0.3,
             api_key=os.getenv("GROQ_API_KEY")
         )

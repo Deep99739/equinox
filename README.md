@@ -38,8 +38,8 @@ Modern professionals are overwhelmed:
 ### 🌅 AI Morning Briefing
 Wake up to a personalized summary:
 - 🌙 Sleep Score (calculated from wellness data)
-- 📧 Critical email count
-- ✅ Today's task overview
+- 📧 Recent unread email count
+- ✅ Open task overview
 - 💬 AI-generated motivational summary
 
 ### 💬 Agentic Chatbot
@@ -119,6 +119,7 @@ Create `backend/.env`:
 ```env
 # Required
 GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-120b
 DATABASE_URL=postgresql://user:pass@localhost:5432/equinox
 SESSION_SECRET=replace_with_a_long_random_secret
 FRONTEND_URL=http://localhost:5173
@@ -142,6 +143,10 @@ For the frontend, copy `frontend/.env.example` to `frontend/.env` and set
 `FRONTEND_URL` on the backend to that frontend's exact origin. Google OAuth
 must use `GOOGLE_REDIRECT_URI` as an authorized callback URL. Existing users
 will need to sign in again after enabling session cookies.
+
+`GROQ_MODEL` defaults to `openai/gpt-oss-120b` when omitted. Groq retired
+`llama-3.3-70b-versatile` for free and developer accounts in August 2026;
+remove any old `GROQ_MODEL` override from Render when deploying this update.
 
 ---
 
