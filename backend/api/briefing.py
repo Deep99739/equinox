@@ -28,8 +28,8 @@ async def get_morning_briefing(req: BriefingRequest,
     
     Combines:
     - Health/wellness data (sleep score)
-    - Critical emails count
-    - Tasks for today
+    - Recent unread email count (up to 10)
+    - Open tasks
     - AI-generated summary
     """
     briefing = await generate_briefing(require_owner(req.email, current_email))
@@ -54,6 +54,8 @@ async def send_briefing_email(req: BriefingRequest,
     # Create email content
     greeting = escape(str(briefing["greeting"]))
     summary = escape(str(briefing["summary"]))
+    sleep_label = (f"Sleep Score: {briefing['sleep_score']}" if briefing['sleep_score'] is not None
+                   else "No sleep data logged today")
     html_content = f"""
     <html>
     <head>
@@ -74,17 +76,17 @@ async def send_briefing_email(req: BriefingRequest,
             
             <div class="item">
                 <span class="icon">🌙</span>
-                <span class="text">Sleep Score: {briefing['sleep_score']}</span>
+                <span class="text">{sleep_label}</span>
             </div>
             
             <div class="item">
                 <span class="icon">📧</span>
-                <span class="text">{briefing['critical_emails']} Critical Emails</span>
+                <span class="text">{briefing['unread_emails']} Recent Unread Emails</span>
             </div>
             
             <div class="item">
                 <span class="icon">✅</span>
-                <span class="text">{briefing['tasks_count']} Tasks Today</span>
+                <span class="text">{briefing['tasks_count']} Open Tasks</span>
             </div>
             
             <div class="summary">
@@ -144,6 +146,8 @@ async def send_briefing_email_internal(email: str) -> bool:
         # Create email content
         greeting = escape(str(briefing["greeting"]))
         summary = escape(str(briefing["summary"]))
+        sleep_label = (f"Sleep Score: {briefing['sleep_score']}" if briefing['sleep_score'] is not None
+                       else "No sleep data logged today")
         html_content = f"""
         <html>
         <head>
@@ -159,9 +163,9 @@ async def send_briefing_email_internal(email: str) -> bool:
         <body>
             <div class="container">
                 <div class="greeting">{greeting} 🌅</div>
-                <div class="item">🌙 Sleep Score: {briefing['sleep_score']}</div>
-                <div class="item">📧 {briefing['critical_emails']} Critical Emails</div>
-                <div class="item">✅ {briefing['tasks_count']} Tasks Today</div>
+                <div class="item">🌙 {sleep_label}</div>
+                <div class="item">📧 {briefing['unread_emails']} Recent Unread Emails</div>
+                <div class="item">✅ {briefing['tasks_count']} Open Tasks</div>
                 <div class="summary"><p style="margin: 0;">{summary}</p></div>
                 <div class="footer">Powered by <strong>Equinox</strong> - Your AI Chief of Staff</div>
             </div>

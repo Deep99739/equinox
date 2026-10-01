@@ -19,6 +19,7 @@ export default function BriefingPage() {
 
     const userEmail = getUserEmail();
     const isLoggedIn = isAuthenticated();
+    const unreadEmails = briefing?.unread_emails ?? briefing?.critical_emails ?? 0;
 
     const handleSignOut = () => {
         void signOut();
@@ -122,7 +123,9 @@ export default function BriefingPage() {
                                     <div className="briefing-item">
                                         <span className="briefing-icon">🌙</span>
                                         <span className="briefing-text">
-                                            Sleep Score: {briefing.sleep_score}
+                                            {briefing.sleep_score === null
+                                                ? 'No sleep data logged today'
+                                                : `Sleep Score: ${briefing.sleep_score}`}
                                         </span>
                                     </div>
                                 )}
@@ -130,7 +133,7 @@ export default function BriefingPage() {
                                 <div className="briefing-item">
                                     <span className="briefing-icon">📧</span>
                                     <span className="briefing-text">
-                                        {briefing.critical_emails} Critical Email{briefing.critical_emails !== 1 ? 's' : ''}
+                                        {unreadEmails} Recent Unread Email{unreadEmails !== 1 ? 's' : ''}
                                     </span>
                                 </div>
 
@@ -142,8 +145,8 @@ export default function BriefingPage() {
                                     <span className="briefing-icon">✅</span>
                                     <span className="briefing-text">
                                         {briefing.schedule_updated
-                                            ? `${briefing.tasks_count} Task${briefing.tasks_count !== 1 ? 's' : ''} Today (Click to ${showTasks ? 'hide' : 'view'})`
-                                            : 'No tasks scheduled'}
+                                            ? `${briefing.tasks_count} Open Task${briefing.tasks_count !== 1 ? 's' : ''} (Click to ${showTasks ? 'hide' : 'view'})`
+                                            : 'No open tasks'}
                                     </span>
                                 </div>
 

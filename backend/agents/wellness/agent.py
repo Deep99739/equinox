@@ -5,6 +5,7 @@ from typing import Literal
 
 from langchain_groq import ChatGroq
 from opik.integrations.langchain import OpikTracer
+from llm_config import GROQ_MODEL
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
@@ -39,7 +40,7 @@ def create_wellness_agent():
     
     # init llm with tools
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model=GROQ_MODEL,
         temperature=0.7,
         api_key=os.getenv("GROQ_API_KEY")
     )

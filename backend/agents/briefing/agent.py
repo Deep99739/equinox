@@ -6,6 +6,7 @@ Orchestrates wellness and productivity data to generate daily briefing
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 import os
+from llm_config import GROQ_MODEL
 
 
 async def generate_briefing(user_email: str) -> dict:
@@ -16,15 +17,15 @@ async def generate_briefing(user_email: str) -> dict:
         user_email: User's email address
         
     Returns:
-        dict with greeting, sleep_score, critical_emails, schedule_updated, summary
+        dict with greeting, today's sleep score, recent unread emails, open tasks, and summary
     """
     user_email = user_email.lower()
     
     # 1. Get health data
-    sleep_score = 0
+    sleep_score = None
     try:
-        from database.operations import get_latest_health_log
-        health_log = get_latest_health_log(user_email)
+        from database.operations import get_today_health_log
+        health_log = get_today_health_log(user_email)
         
         if health_log:
             # Calculate sleep score (0-100 based on hours)
@@ -34,10 +35,10 @@ async def generate_briefing(user_email: str) -> dict:
         print(f"Health data fetch error: {e}")
     
     # 2. Get Tasks & Emails
-    tasks_today = 0
+    open_tasks = 0
     schedule_updated = False
     task_titles = []
-    critical_emails = 0
+    unread_emails = 0
     email_summaries = []
     
     # Get tokens ONCE for both services
@@ -61,8 +62,8 @@ async def generate_briefing(user_email: str) -> dict:
             
             # Filter for incomplete
             incomplete_todos = [t for t in all_todos if not t.completed]
-            tasks_today = len(incomplete_todos)
-            schedule_updated = tasks_today > 0
+            open_tasks = len(incomplete_todos)
+            schedule_updated = open_tasks > 0
             task_titles = [t.text for t in incomplete_todos]
         finally:
             db.close()
@@ -78,12 +79,21 @@ async def generate_briefing(user_email: str) -> dict:
             service = get_gmail_service(tokens)
             # Fetch specifically unread emails
             emails = fetch_recent_emails(service, max_results=10, query='is:unread')
-            critical_emails = len(emails)
+            unread_emails = len(emails)
             
-            # Get snippets for first 5 for the summary
+            # Gmail's list response only contains IDs. Fetch metadata for context.
             for e in emails[:5]:
-                snippet = e.get('snippet', '')
-                email_summaries.append(f"- {snippet[:150]}...")
+                message = service.users().messages().get(
+                    userId='me', id=e['id'], format='metadata',
+                    metadataHeaders=['Subject'],
+                ).execute()
+                subject = next((
+                    h.get('value', '') for h in message.get('payload', {}).get('headers', [])
+                    if h.get('name', '').lower() == 'subject'
+                ), '')
+                context = f"{subject}: {message.get('snippet', '')}".strip(': ')
+                if context:
+                    email_summaries.append(f"- {context[:200]}")
                 
         except Exception as e:
             print(f"Email fetch error: {e}")
@@ -92,7 +102,7 @@ async def generate_briefing(user_email: str) -> dict:
     summary = ""
     try:
         llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
+            model=GROQ_MODEL,
             api_key=os.getenv("GROQ_API_KEY"),
             temperature=0.7
         )
@@ -101,14 +111,14 @@ async def generate_briefing(user_email: str) -> dict:
             """You are a helpful AI assistant creating a brief morning summary.
             
             User's data:
-            - Sleep score: {sleep_score}/100 (If 0, assume no data tracked)
-            - Unread Emails: {emails}
+            - Today's sleep score: {sleep_score} (if not logged, say no data was logged today)
+            - Recent unread emails sampled (up to 10): {emails}
             - Recent Email Snippets: {email_context}
-            - Tasks Count: {tasks}
+            - Open Tasks Count: {tasks}
             - Task List: {task_list}
             
             Generate a warm, encouraging morning briefing (max 3 sentences).
-            1. Acknowledge their health status (if sleep score > 0). If 0, suggest tracking sleep or taking it easy.
+            1. Acknowledge their health status if today's sleep score is available. Otherwise suggest tracking sleep.
             2. Mention their workload (tasks). Mention specific high-priority sounding tasks if any.
             3. Mention if checking emails is urgent based on snippets.
             
@@ -118,17 +128,17 @@ async def generate_briefing(user_email: str) -> dict:
         
         chain = prompt | llm
         response = chain.invoke({
-            "sleep_score": sleep_score,
-            "emails": critical_emails,
+            "sleep_score": sleep_score if sleep_score is not None else "not logged",
+            "emails": unread_emails,
             "email_context": "; ".join(email_summaries) if email_summaries else "No recent emails",
-            "tasks": tasks_today,
+            "tasks": open_tasks,
             "task_list": ", ".join(task_titles[:5]) # Pass first 5 task titles
         })
         
         summary = response.content
     except Exception as e:
         print(f"LLM summary error: {e}")
-        summary = "Have a great day! Focus on your priorities."
+        summary = "AI summary is unavailable right now. Please try refreshing later."
     
     # Extract user name from email
     user_name = user_email.split('@')[0].title()
@@ -136,8 +146,9 @@ async def generate_briefing(user_email: str) -> dict:
     return {
         "greeting": f"Good morning, {user_name}",
         "sleep_score": sleep_score,
-        "critical_emails": critical_emails,
+        "unread_emails": unread_emails,
+        "critical_emails": unread_emails,  # Compatibility with an older deployed frontend.
         "schedule_updated": schedule_updated,
-        "tasks_count": tasks_today,
+        "tasks_count": open_tasks,
         "summary": summary
     }

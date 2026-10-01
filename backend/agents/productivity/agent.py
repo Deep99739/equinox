@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from opik.integrations.langchain import OpikTracer
+from llm_config import GROQ_MODEL
 
 from .state import ProductivityState
 from .tools import PRODUCTIVITY_TOOLS
@@ -34,7 +35,7 @@ def create_productivity_agent():
     """create and return the productivity agent graph"""
     
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model=GROQ_MODEL,
         temperature=0.5,
         api_key=os.getenv("GROQ_API_KEY")
     )
