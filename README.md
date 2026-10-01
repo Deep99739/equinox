@@ -1,61 +1,22 @@
-# 🌅 Equinox - Your AI-Powered Life OS
+# Equinox
 
-<div align="center">
+A calmer place for your tasks, notes, wellbeing check-ins, and AI assistance.
 
-**Balance your health, productivity, and focus with one intelligent platform**
+[Open the live app](https://equinox0.netlify.app)
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-equinox0.netlify.app-blue?style=for-the-badge)](https://equinox0.netlify.app)
-[![Built with Opik](https://img.shields.io/badge/📊_Observability-Opik-orange?style=for-the-badge)](https://www.comet.com/opik)
-[![LangChain](https://img.shields.io/badge/🧠_AI-LangChain-green?style=for-the-badge)](https://langchain.com)
+![The Equinox Today workspace with sample tasks](frontend/public/equinox-today-preview.png)
 
-</div>
+## What you can do
 
----
+- **Start with Today:** see open tasks, a wellness check-in prompt, and a path to your briefing or chat.
+- **Manage tasks and notes:** add, complete, edit, and keep track of the small things that matter.
+- **Check in on yourself:** manually log sleep, energy, stress, and mood; view readiness feedback when available.
+- **Ask Equinox:** use general or wellness chat for help thinking through your day.
+- **Generate a briefing:** request a summary of tasks, wellness, and connected email, then choose whether to send it by email.
 
-## 🎯 The Problem
+Equinox uses Google sign-in. The interface does not require a wellness entry to reach your tasks or chat. Briefings are generated when you request them.
 
-Modern professionals are overwhelmed:
-- **35+ apps switched daily** — health trackers, task managers, calendars, emails
-- **No unified intelligence** — nothing connects your wellness with your productivity
-- **Decision fatigue & burnout** — without a single source of truth, priorities slip through
-
-## 💡 Our Solution
-
-**Equinox** is an AI-powered life OS that unifies your health, tasks, and emails with multi-agent intelligence — fully traced using **Opik** for complete LLM observability.
-
----
-
-## ✨ Key Features
-
-### 🤖 Multi-Agent Architecture
-| Agent | Responsibility |
-|-------|----------------|
-| **Supervisor** | Routes queries to the appropriate specialist agent |
-| **Wellness Agent** | Handles health, sleep, readiness, and workout queries |
-| **Productivity Agent** | Manages emails, notes, todos, and calendar |
-| **Briefing Agent** | Generates personalized morning summaries |
-
-### 🌅 AI Morning Briefing
-Wake up to a personalized summary:
-- 🌙 Sleep Score (calculated from wellness data)
-- 📧 Recent unread email count
-- ✅ Open task overview
-- 💬 AI-generated motivational summary
-
-### 💬 Agentic Chatbot
-Natural language interface to manage your day:
-```
-"What are my tasks for today?"
-"Do I have any critical emails?"
-"How did I sleep last night?"
-```
-
-### 📊 Full Opik Observability
-Every AI agent call is traced with **Opik**:
-- LLM prompts and responses
-- Latency and token usage
-- Tool calls and agent decisions
-- Conversation threading by `thread_id`
+[Design decisions](DESIGN.md) explain the new information structure, visual language, and motion choices.
 
 ---
 
@@ -172,10 +133,11 @@ equinox/
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
+│   │   │   ├── Today/       # Daily workspace
 │   │   │   ├── Home/        # Landing page
 │   │   │   ├── Chat/        # Agentic chatbot
 │   │   │   ├── Briefing/    # Morning briefing
-│   │   │   ├── Productivity/# Notes & Todos
+│   │   │   ├── Productivity/ # Notes and tasks
 │   │   │   └── Wellness/    # Health dashboard
 │   │   ├── components/      # Shared UI components
 │   │   └── api/             # API client utilities
@@ -204,7 +166,7 @@ equinox/
 |--------|----------|-------------|
 | `GET` | `/todos/{email}` | Get user todos (Local + Google Tasks) |
 | `POST` | `/todos/` | Create todo |
-| `PATCH` | `/todos/{id}` | Toggle/update todo |
+| `PUT` | `/todos/{id}` | Toggle/update todo |
 | `DELETE` | `/todos/{id}` | Delete todo |
 
 ### Notes
