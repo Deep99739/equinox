@@ -1,3 +1,4 @@
+import logging
 import os
 import requests
 from fastapi import APIRouter, Request, Depends, HTTPException
@@ -12,6 +13,7 @@ from auth import get_current_email
 from state.user_tokens import save_user_tokens, get_user_tokens
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Get OAuth credentials from environment variables
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -33,7 +35,7 @@ SCOPES = [
 ]
 
 
-def get_oauth_flow():
+def get_oauth_flow(state: str | None = None, code_verifier: str | None = None):
     """Create OAuth flow from environment variables"""
     client_config = {
         "web": {
@@ -44,7 +46,13 @@ def get_oauth_flow():
             "redirect_uris": [REDIRECT_URI],
         }
     }
-    return Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=REDIRECT_URI)
+    return Flow.from_client_config(
+        client_config,
+        scopes=SCOPES,
+        redirect_uri=REDIRECT_URI,
+        state=state,
+        code_verifier=code_verifier,
+    )
 
 
 @router.get("/auth/google/login")
@@ -57,6 +65,7 @@ def google_login(request: Request):
         include_granted_scopes="true",
     )
     request.session["oauth_state"] = state
+    request.session["oauth_code_verifier"] = flow.code_verifier
 
     return RedirectResponse(auth_url)
 
@@ -64,17 +73,22 @@ def google_login(request: Request):
 @router.get("/auth/google/callback")
 def google_callback(request: Request, db: Session = Depends(get_db)):
     expected_state = request.session.pop("oauth_state", None)
-    if not expected_state or request.query_params.get("state") != expected_state:
+    code_verifier = request.session.pop("oauth_code_verifier", None)
+    authorization_code = request.query_params.get("code")
+    if (
+        not expected_state
+        or not code_verifier
+        or not authorization_code
+        or request.query_params.get("state") != expected_state
+    ):
+        logger.warning("Google OAuth callback missing or mismatched state, verifier, or code")
         return RedirectResponse(f"{FRONTEND_URL}?error=auth_failed")
-    flow = get_oauth_flow()
+    flow = get_oauth_flow(state=expected_state, code_verifier=code_verifier)
 
     try:
-        flow.fetch_token(
-            authorization_response=str(request.url),
-            include_granted_scopes=False  # Don't require all scopes
-        )
-    except Exception:
-        # Handle invalid_grant or other OAuth errors
+        flow.fetch_token(code=authorization_code, timeout=15)
+    except Exception as exc:
+        logger.warning("Google OAuth token exchange failed: %s", type(exc).__name__)
         return RedirectResponse(f"{FRONTEND_URL}?error=auth_failed")
     
     credentials = flow.credentials
