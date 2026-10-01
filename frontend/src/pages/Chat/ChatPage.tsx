@@ -7,8 +7,7 @@ import { sendChatMessage, saveThread, getThread } from '../../api/chatApi';
 import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { signOut, setAuth } from '../../utils/authUtils';
-import { fetchSession } from '../../api/authApi';
+import { getUserEmail, signOut } from '../../utils/authUtils';
 
 // Typing indicator component
 const TypingIndicator = () => (
@@ -44,23 +43,23 @@ export default function ChatInterface() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-    // The backend session is the authority for the account and route.
+    // ProtectedLayout has already checked the backend session and stored its account.
     useEffect(() => {
         let cancelled = false;
-        fetchSession()
-            .then(async ({ email }) => {
-                if (cancelled) return;
-                setAuth(email);
-                if (!threadId || routeEmail !== email) {
-                    navigate(`/chat/${encodeURIComponent(email)}/${crypto.randomUUID()}`, { replace: true });
-                    return;
-                }
-                const data = await getThread(email, threadId).catch(() => null);
-                if (!cancelled) setMessages(data?.messages ?? []);
-            })
-            .catch(() => {
-                if (!cancelled) navigate('/', { replace: true });
-            });
+        const email = getUserEmail();
+        if (!email) {
+            navigate('/', { replace: true });
+        } else if (!threadId || routeEmail !== email) {
+            navigate(`/chat/${encodeURIComponent(email)}/${crypto.randomUUID()}`, { replace: true });
+        } else {
+            getThread(email, threadId)
+                .then(data => {
+                    if (!cancelled) setMessages(data.messages);
+                })
+                .catch(() => {
+                    if (!cancelled) setMessages([]);
+                });
+        }
         return () => { cancelled = true; };
     }, [routeEmail, threadId, navigate]);
 

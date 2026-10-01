@@ -1,6 +1,8 @@
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { handleGoogleSignIn } from "../../../api/authApi";
 
-export function CTA() {
+export function CTA({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="cta">
       <div className="container">
@@ -22,13 +24,20 @@ export function CTA() {
             </p>
 
             <div className="cta__buttons">
-              <button type="button" className="btn btn--primary btn--lg">
-                Get Started Free
-                <ArrowRight className="icon--md" />
-              </button>
-              <button type="button" className="btn btn--outline btn--lg">
+              {signedIn ? (
+                <Link to="/chat" className="btn btn--primary btn--lg">
+                  Open Equinox
+                  <ArrowRight className="icon--md" />
+                </Link>
+              ) : (
+                <button type="button" className="btn btn--primary btn--lg" onClick={handleGoogleSignIn}>
+                  Get Started Free
+                  <ArrowRight className="icon--md" />
+                </button>
+              )}
+              <Link to="/contact" className="btn btn--outline btn--lg">
                 Talk to Us
-              </button>
+              </Link>
             </div>
           </div>
         </div>
