@@ -143,7 +143,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     request.session["email"] = google_email
 
     return RedirectResponse(
-        f"{FRONTEND_URL}/chat"
+        f"{FRONTEND_URL}/today"
     )
 
 

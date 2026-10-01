@@ -1,54 +1,33 @@
-import { useState, useEffect } from 'react';
-import { Sun, Moon } from 'lucide-react';
-import './ThemeToggle.css';
+import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 
-type Theme = 'light' | 'dark';
-
+type Theme = "light" | "dark";
 export function ThemeToggle() {
-    const [theme, setTheme] = useState<Theme>(() => {
-        // Check localStorage first
-        const stored = localStorage.getItem('theme') as Theme | null;
-        if (stored) return stored;
-
-        // Default to light mode as requested
-        return 'light';
-    });
-
-    useEffect(() => {
-        // Apply theme to document
-        document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    // Listen for system preference changes
-    useEffect(() => {
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        const handleChange = (e: MediaQueryListEvent) => {
-            // Only auto-switch if user hasn't manually set a preference
-            if (!localStorage.getItem('theme')) {
-                setTheme(e.matches ? 'dark' : 'light');
-            }
-        };
-
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-    }, []);
-
-    const toggleTheme = () => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light');
-    };
-
-    return (
-        <button
-            className="theme-toggle"
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-            {theme === 'light' ? (
-                <Moon size={18} strokeWidth={1.5} />
-            ) : (
-                <Sun size={18} strokeWidth={1.5} />
-            )}
-        </button>
-    );
+  const [theme, setTheme] = useState<Theme>(() => {
+    const stored = localStorage.getItem("theme");
+    return stored === "dark" ? "dark" : "light";
+  });
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+  return (
+    <button
+      type="button"
+      className="theme-choice"
+      onClick={() =>
+        setTheme((current) => (current === "light" ? "dark" : "light"))
+      }
+      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+    >
+      <span className="theme-choice-icon">
+        {theme === "light" ? <Moon size={19} /> : <Sun size={19} />}
+      </span>
+      <span>
+        <strong>Appearance</strong>
+        <small>{theme === "light" ? "Light mode" : "Dark mode"}</small>
+      </span>
+      <span className="theme-choice-action">Switch</span>
+    </button>
+  );
 }
