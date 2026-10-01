@@ -1,215 +1,248 @@
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowUp, Plus, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+  getThread,
+  saveThread,
+  sendChatMessage,
+  type AgentType,
+  type ChatMessage,
+} from "../../api/chatApi";
+import { getUserEmail } from "../../utils/authUtils";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import './ChatPage.css';
-import { User, Sparkles } from 'lucide-react';
-import { sendChatMessage, saveThread, getThread } from '../../api/chatApi';
-import SignedInNavbar from '../../components/Navbar/SignedInNavbar';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { getUserEmail, signOut } from '../../utils/authUtils';
+const prompts = [
+  "What tasks are still open?",
+  "Help me plan my day",
+  "How can I manage my energy today?",
+];
+export default function ChatPage() {
+  const { email: routeEmail, threadId } = useParams();
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [agent, setAgent] = useState<AgentType>("supervisor");
+  const [sending, setSending] = useState(false);
+  const [loadingThread, setLoadingThread] = useState(true);
+  const [error, setError] = useState("");
+  const bottom = useRef<HTMLDivElement>(null);
+  const textarea = useRef<HTMLTextAreaElement>(null);
+  const email = getUserEmail();
 
-// Typing indicator component
-const TypingIndicator = () => (
-    <div className="message bot">
-        <div className="message-content">
-            <div className="message-avatar">
-                <Sparkles size={20} />
-            </div>
-            <div className="message-bubble typing-bubble">
-                <div className="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </div>
+  useEffect(() => {
+    if (!email) {
+      navigate("/", { replace: true });
+      return;
+    }
+    if (!threadId || routeEmail !== email) {
+      navigate(`/chat/${encodeURIComponent(email)}/${crypto.randomUUID()}`, {
+        replace: true,
+      });
+      return;
+    }
+    let active = true;
+    getThread(email, threadId)
+      .then((data) => {
+        if (active) setMessages(data.messages || []);
+      })
+      .catch(() => {
+        if (active) setMessages([]);
+      })
+      .finally(() => {
+        if (active) setLoadingThread(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [email, routeEmail, threadId, navigate]);
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "instant" });
+  }, [messages, sending]);
+  useEffect(() => {
+    if (textarea.current) {
+      textarea.current.style.height = "auto";
+      textarea.current.style.height = `${Math.min(textarea.current.scrollHeight, 180)}px`;
+    }
+  }, [input]);
+  function newChat() {
+    if (email)
+      navigate(`/chat/${encodeURIComponent(email)}/${crypto.randomUUID()}`);
+  }
+  async function send() {
+    const text = input.trim();
+    if (!text || sending || !email || !threadId) return;
+    setError("");
+    setInput("");
+    setSending(true);
+    const userMessage: ChatMessage = { id: Date.now(), sender: "user", text };
+    const next = [...messages, userMessage];
+    setMessages(next);
+    try {
+      const result = await sendChatMessage(text, agent, email, threadId);
+      const reply = result.response || result.summary || result.reply;
+      if (!reply) throw new Error("Empty reply");
+      const complete = [
+        ...next,
+        { id: Date.now() + 1, sender: "bot", text: reply },
+      ];
+      setMessages(complete);
+      try {
+        await saveThread(
+          email,
+          threadId,
+          complete,
+          complete[0]?.text.slice(0, 48) || "Conversation",
+        );
+      } catch {
+        setError(
+          "Response received, but this conversation could not be saved.",
+        );
+      }
+    } catch {
+      setMessages(messages);
+      setInput(text);
+      setError("Could not send your message. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void send();
+    }
+  }
+  return (
+    <div className="chat-page">
+      <div className="chat-header">
+        <div>
+          <p className="eyebrow">Your assistant</p>
+          <h1>
+            Ask Equinox<span className="heading-dot">.</span>
+          </h1>
         </div>
-    </div>
-);
-
-export default function ChatInterface() {
-    const { email: routeEmail, threadId } = useParams();
-    const navigate = useNavigate();
-
-    // Sign out handler for navbar
-    const handleSignOut = () => {
-        void signOut();
-    };
-
-    const [messages, setMessages] = useState<{ text: string; sender: string; id: number }[]>([]);
-    const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const messagesContainerRef = useRef<HTMLDivElement>(null);
-
-    // ProtectedLayout has already checked the backend session and stored its account.
-    useEffect(() => {
-        let cancelled = false;
-        const email = getUserEmail();
-        if (!email) {
-            navigate('/', { replace: true });
-        } else if (!threadId || routeEmail !== email) {
-            navigate(`/chat/${encodeURIComponent(email)}/${crypto.randomUUID()}`, { replace: true });
-        } else {
-            getThread(email, threadId)
-                .then(data => {
-                    if (!cancelled) setMessages(data.messages);
-                })
-                .catch(() => {
-                    if (!cancelled) setMessages([]);
-                });
-        }
-        return () => { cancelled = true; };
-    }, [routeEmail, threadId, navigate]);
-
-    // Auto-resize textarea
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
-        }
-    }, [input]);
-
-    // Auto-scroll to bottom when messages change or loading state changes
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages, isLoading]);
-
-    const handleSubmit = async () => {
-        if (!input.trim()) return;
-        // Use params or fallback
-        const effectiveEmail = routeEmail || localStorage.getItem('user_email');
-
-        const userMsg = { text: input, sender: 'user', id: Date.now() };
-        // Optimistic update
-        const updatedMessages = [...messages, userMsg];
-        setMessages(updatedMessages);
-        setInput('');
-        setIsLoading(true);
-
-        try {
-            // Pass threadId if available
-            const data = await sendChatMessage(input, 'supervisor', effectiveEmail, threadId);
-            // handle both wellness (response) and supervisor (summary) formats
-            const replyText =
-                data?.response || data?.summary || data?.reply || 'Unexpected response from AI';
-
-            const botMsg = { text: replyText, sender: 'bot', id: Date.now() + 1 };
-            const finalMessages = [...updatedMessages, botMsg];
-
-            setMessages(finalMessages);
-
-            // Persist thread
-            if (effectiveEmail && threadId) {
-                await saveThread(effectiveEmail, threadId, finalMessages, "Conversation");
-            }
-        } catch {
-            const errorMsg = { text: 'Error connecting to AI', sender: 'bot', id: Date.now() + 1 };
-            setMessages(prev => [...prev, errorMsg]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit();
-        }
-    };
-
-    return (
-        <>
-            <SignedInNavbar onSignOut={handleSignOut} />
-            <div className="chat-container">
-                <div className="messages-container" ref={messagesContainerRef}>
-                    {messages.length === 0 && !isLoading ? (
-                        <div className="empty-state">
-                            <div className="empty-icon-wrapper">
-                                <Sparkles size={48} className="empty-sparkle" />
-                            </div>
-                            <h2>How can I help you today?</h2>
-                            <p>Start a conversation by typing a message below</p>
-                            <div className="suggestion-chips">
-                                <button className="suggestion-chip" onClick={() => setInput('Summarize my emails')}>📧 Summarize my emails</button>
-                                <button className="suggestion-chip" onClick={() => setInput('How is my wellness today?')}>💪 Check my wellness</button>
-                                <button className="suggestion-chip" onClick={() => setInput('What tasks do I have?')}>📋 Show my tasks</button>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            {messages.map((msg) => (
-                                <div key={msg.id} className={`message ${msg.sender}`}>
-                                    <div className="message-content">
-                                        <div className="message-avatar">
-                                            {msg.sender === 'user' ? <User size={20} /> : <Sparkles size={20} />}
-                                        </div>
-                                        <div className="message-bubble">
-                                            {msg.sender === 'bot' ? (
-                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                    {msg.text}
-                                                </ReactMarkdown>
-                                            ) : (
-                                                msg.text
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            {isLoading && <TypingIndicator />}
-                            <div ref={messagesEndRef} />
-                        </>
-                    )}
-                </div>
-
-                <div className="input-section">
-                    <div className="input-wrapper">
-                        <textarea
-                            ref={textareaRef}
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Message Equinox..."
-                            className="chat-input"
-                            rows={1}
-                        />
-                        <button
-                            onClick={handleSubmit}
-                            className="send-button"
-                            disabled={!input.trim() || isLoading}
-                        >
-                            <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="white"
-                                strokeWidth="2"
-                                style={{ zIndex: 20, position: 'relative', display: 'block' }}
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div className="input-footer">
-                        <button className="footer-button">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M8 12l2 2 4-4" />
-                            </svg>
-                            Add Agents
-                        </button>
-                        <div className="footer-info">
-                            Equinox can make mistakes. Please verify important information.
-                        </div>
-                    </div>
-                </div>
+        <button
+          type="button"
+          className="button button-secondary"
+          onClick={newChat}
+        >
+          <Plus size={17} /> New chat
+        </button>
+      </div>
+      <div className="chat-stream" aria-live="polite">
+        {loadingThread ? (
+          <p className="muted-line" role="status">
+            Opening conversation…
+          </p>
+        ) : messages.length === 0 ? (
+          <div className="chat-welcome">
+            <span className="assistant-mark">
+              <Sparkles size={23} />
+            </span>
+            <h2>Where can I help today?</h2>
+            <p>
+              Ask about your plans, tasks, or how you’re feeling. Start wherever
+              you are.
+            </p>
+            <div className="prompt-list">
+              {prompts.map((prompt) => (
+                <button
+                  type="button"
+                  key={prompt}
+                  onClick={() => {
+                    setInput(prompt);
+                    textarea.current?.focus();
+                  }}
+                >
+                  {prompt}
+                  <span>↗</span>
+                </button>
+              ))}
             </div>
-        </>
-    );
+          </div>
+        ) : (
+          <div className="chat-messages">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`chat-message ${message.sender === "user" ? "from-user" : "from-assistant"}`}
+              >
+                <span className="message-author">
+                  {message.sender === "user" ? "You" : "Equinox"}
+                </span>
+                <div className="message-body">
+                  {message.sender === "user" ? (
+                    message.text
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {message.text}
+                    </ReactMarkdown>
+                  )}
+                </div>
+              </div>
+            ))}
+            {sending && (
+              <div className="chat-message from-assistant">
+                <span className="message-author">Equinox</span>
+                <div className="typing-dots" aria-label="Equinox is responding">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+              </div>
+            )}
+            <div ref={bottom} />
+          </div>
+        )}
+      </div>
+      <div className="chat-composer-wrap">
+        {error && (
+          <p className="inline-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="chat-composer">
+          <label className="sr-only" htmlFor="chat-message">
+            Message
+          </label>
+          <textarea
+            ref={textarea}
+            id="chat-message"
+            rows={1}
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Ask anything about your day…"
+            disabled={loadingThread || sending}
+          />
+          <div className="composer-bottom">
+            <label className="agent-select-label" htmlFor="chat-agent">
+              Assistant{" "}
+              <select
+                id="chat-agent"
+                value={agent}
+                onChange={(event) => setAgent(event.target.value as AgentType)}
+              >
+                <option value="supervisor">General</option>
+                <option value="wellness">Wellness</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="composer-send"
+              aria-label="Send message"
+              onClick={() => void send()}
+              disabled={!input.trim() || sending || loadingThread}
+            >
+              <ArrowUp size={19} />
+            </button>
+          </div>
+        </div>
+        <p className="chat-note">
+          Equinox can make mistakes. Check important information.
+        </p>
+      </div>
+    </div>
+  );
 }
