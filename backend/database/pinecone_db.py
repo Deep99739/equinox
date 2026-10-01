@@ -8,13 +8,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "equinox-memory")
 
 
 def get_pinecone_index():
     """get the index handle"""
-    return pc.Index(INDEX_NAME)
+    api_key = os.getenv("PINECONE_API_KEY")
+    if not api_key:
+        raise RuntimeError("PINECONE_API_KEY is not configured")
+    return Pinecone(api_key=api_key).Index(INDEX_NAME)
 
 
 def store_memory(user_id: str, memory_id: str, text: str, metadata: dict) -> bool:

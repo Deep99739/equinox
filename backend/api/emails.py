@@ -3,21 +3,24 @@ from sqlalchemy.orm import Session
 from database import get_db, User
 from state.user_tokens import get_user_tokens
 from tools.google_auth import get_gmail_service
+from auth import get_current_email, require_owner
 
 router = APIRouter(prefix="/api/emails", tags=["emails"])
 
 @router.get("/{email}")
-def get_user_emails(email: str, limit: int = 50, db: Session = Depends(get_db)):
+def get_user_emails(email: str, limit: int = 50, db: Session = Depends(get_db),
+                    current_email: str = Depends(get_current_email)):
     """
     Fetch recent emails for a user.
     """
     # 1. Get User
+    email = require_owner(email, current_email)
     user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
     # 2. Get tokens
-    tokens = get_user_tokens(str(user.id))
+    tokens = get_user_tokens(email)
     if not tokens:
         raise HTTPException(status_code=401, detail="User not authenticated with Google")
         
@@ -25,7 +28,7 @@ def get_user_emails(email: str, limit: int = 50, db: Session = Depends(get_db)):
     try:
         service = get_gmail_service(tokens)
     except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Failed to create Gmail service: {str(e)}")
+        raise HTTPException(status_code=401, detail="Failed to create Gmail service") from e
         
     # 4. Fetch Emails
     try:
@@ -84,4 +87,4 @@ def get_user_emails(email: str, limit: int = 50, db: Session = Depends(get_db)):
         return ordered_emails
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gmail API error: {str(e)}")
+        raise HTTPException(status_code=502, detail="Gmail API error") from e

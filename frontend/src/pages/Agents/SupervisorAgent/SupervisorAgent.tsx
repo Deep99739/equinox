@@ -13,7 +13,7 @@ const SupervisorAgent: React.FC = () => {
         setStatus("");
         try {
             const data = await simulateFatigue(fatigueLevel);
-            setStatus(data.status || data.reply || "Simulation complete.");
+            setStatus(data.reply || "No response returned.");
         } catch (e) {
             setStatus("Error: " + e);
         }

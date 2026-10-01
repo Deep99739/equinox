@@ -1,15 +1,18 @@
+import { apiFetch } from './apiClient';
 // chat api - supports multiple agents
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export type AgentType = 'wellness' | 'productivity' | 'supervisor';
+export interface ChatMessage { text: string; sender: string; id: number }
+export interface ChatReply { response?: string; summary?: string; reply?: string; thread_id?: string }
+export interface SavedThread { messages: ChatMessage[]; title: string }
 
 export async function sendChatMessage(
     message: string,
-    _port: string = '8000', // kept for backwards compatibility
     agent: AgentType = 'supervisor',
     email?: string | null,
     threadId?: string | null
-): Promise<any> {
+): Promise<ChatReply> {
     // each agent has its own endpoint
     const endpoints: Record<AgentType, string> = {
         wellness: '/api/chat/wellness',
@@ -17,9 +20,9 @@ export async function sendChatMessage(
         supervisor: '/supervisor'
     };
 
-    const endpoint = endpoints[agent] || endpoints.wellness;
+    const endpoint = endpoints[agent];
 
-    const res = await fetch(`${API_URL}${endpoint}`, {
+    const res = await apiFetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, email, thread_id: threadId })
@@ -35,11 +38,10 @@ export async function sendChatMessage(
 export async function saveThread(
     email: string,
     threadId: string,
-    messages: { text: string; sender: string; id: number }[],
-    title: string = "New Conversation",
-    _port: string = '8000'
-): Promise<any> {
-    const res = await fetch(`${API_URL}/api/history/${email}/${threadId}`, {
+    messages: ChatMessage[],
+    title: string = "New Conversation"
+): Promise<{ status: string; thread_id: string }> {
+    const res = await apiFetch(`${API_URL}/api/history/${email}/${threadId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -49,17 +51,16 @@ export async function saveThread(
     });
 
     if (!res.ok) {
-        console.error('Failed to save thread');
+        throw new Error(`Failed to save thread: ${res.status}`);
     }
     return res.json();
 }
 
 export async function getThread(
     email: string,
-    threadId: string,
-    _port: string = '8000'
-): Promise<any> {
-    const res = await fetch(`${API_URL}/api/history/${email}/${threadId}`);
+    threadId: string
+): Promise<SavedThread> {
+    const res = await apiFetch(`${API_URL}/api/history/${email}/${threadId}`);
     if (!res.ok) {
         throw new Error('Thread not found');
     }

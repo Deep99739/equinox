@@ -42,12 +42,10 @@ def create_productivity_agent():
     
     def call_model(state: ProductivityState):
         messages = state["messages"]
-        user_id = state.get("user_id", "unknown_user")
-        
         # Check if system message exists
         if not any(isinstance(m, SystemMessage) for m in messages):
             # Inject user context
-            context_prompt = f"{SYSTEM_PROMPT}\n\nCurrent User Email: {user_id}\nUse this email for all tool calls that require 'user_email'."
+            context_prompt = SYSTEM_PROMPT
             messages = [SystemMessage(content=context_prompt)] + list(messages)
             
         response = llm_with_tools.invoke(messages)
@@ -104,8 +102,10 @@ def chat_with_productivity_agent(user_id: str, message: str) -> str:
     }
     
     opik_tracer = OpikTracer(project_name="equinox")
-    result = agent.invoke(initial_state, config={"callbacks": [opik_tracer]})
+    result = agent.invoke(initial_state, config={
+        "callbacks": [opik_tracer],
+        "configurable": {"user_email": user_id},
+    })
     
     last_message = result["messages"][-1]
     return last_message.content
-

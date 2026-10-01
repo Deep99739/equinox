@@ -12,7 +12,7 @@ import type {
     ReadinessResponse
 } from '../../api/healthApi';
 import './WellnessPage.css';
-import { getUserEmail, clearAuth } from '../../utils/authUtils';
+import { getUserEmail, signOut } from '../../utils/authUtils';
 
 export default function WellnessPage() {
     const userEmail = getUserEmail();
@@ -39,8 +39,7 @@ export default function WellnessPage() {
     });
 
     const handleSignOut = () => {
-        clearAuth();
-        window.location.href = '/';
+        void signOut();
     };
 
     // Fetch today's log and readiness on mount
@@ -81,7 +80,7 @@ export default function WellnessPage() {
             }
         }
         fetchData();
-    }, []);
+    }, [userEmail]);
 
     const handleSliderChange = (field: keyof HealthLogInput, value: number) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -102,7 +101,7 @@ export default function WellnessPage() {
             setTodayLog(log);
 
             // Refresh readiness
-            const score = await getReadiness();
+            const score = await getReadiness(userEmail);
             setReadiness(score);
 
             setSuccessMsg('Health logged successfully! 🎉');

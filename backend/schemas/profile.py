@@ -3,7 +3,7 @@
 from datetime import time
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserProfileCreate(BaseModel):
@@ -71,8 +71,7 @@ class UserProfileResponse(BaseModel):
     notification_enabled: bool
     daily_checkin_time: Optional[time]
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserResponse(BaseModel):
@@ -87,5 +86,4 @@ class UserResponse(BaseModel):
     wellness_level: int
     timezone: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

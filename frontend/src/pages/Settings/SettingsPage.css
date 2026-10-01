@@ -147,6 +147,20 @@
   color: #e5e5e5;
 }
 
+.app-status {
+  color: #a3a3a3;
+  font-size: 0.9rem;
+}
+
+.app-connect {
+  border: 1px solid rgba(249, 115, 22, 0.5);
+  border-radius: 8px;
+  padding: 0.45rem 0.8rem;
+  background: transparent;
+  color: #f97316;
+  cursor: pointer;
+}
+
 /* ===== Toggle Switch ===== */
 .switch {
   position: relative;

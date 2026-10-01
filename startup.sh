@@ -8,7 +8,7 @@ FRONTEND="$ROOT/frontend"
 start_backend() {
   cd "$BACKEND"
   if [ ! -f .env ]; then
-    echo "backend/.env is missing. Create it with GROQ_API_KEY before starting."
+    echo "backend/.env is missing. Copy backend/.env.example and fill in its required values."
     exit 1
   fi
   echo "Installing backend deps..."
@@ -29,7 +29,8 @@ start_frontend() {
 
 cleanup() {
   echo "Stopping services..."
-  kill ${BACKEND_PID:-0} ${FRONTEND_PID:-0} 2>/dev/null || true
+  if [ -n "${BACKEND_PID:-}" ]; then kill "$BACKEND_PID" 2>/dev/null || true; fi
+  if [ -n "${FRONTEND_PID:-}" ]; then kill "$FRONTEND_PID" 2>/dev/null || true; fi
 }
 
 trap cleanup EXIT

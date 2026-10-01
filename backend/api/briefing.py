@@ -3,9 +3,11 @@ Morning Briefing API Endpoints
 """
 
 import base64
+from html import escape
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from auth import get_current_email, require_owner
 from pydantic import BaseModel
 from agents.briefing import generate_briefing
 from state.user_tokens import get_user_tokens
@@ -19,7 +21,8 @@ class BriefingRequest(BaseModel):
 
 
 @router.post("/api/briefing/generate")
-async def get_morning_briefing(req: BriefingRequest):
+async def get_morning_briefing(req: BriefingRequest,
+                               current_email: str = Depends(get_current_email)):
     """
     Generate morning briefing for user
     
@@ -29,24 +32,28 @@ async def get_morning_briefing(req: BriefingRequest):
     - Tasks for today
     - AI-generated summary
     """
-    briefing = await generate_briefing(req.email.lower())
+    briefing = await generate_briefing(require_owner(req.email, current_email))
     return briefing
 
 
 @router.post("/api/briefing/send-email")
-async def send_briefing_email(req: BriefingRequest):
+async def send_briefing_email(req: BriefingRequest,
+                              current_email: str = Depends(get_current_email)):
     """
     Generate briefing and send it to user's email
     """
     # Get user tokens
-    tokens = get_user_tokens(req.email)
+    email = require_owner(req.email, current_email)
+    tokens = get_user_tokens(email)
     if not tokens:
         raise HTTPException(status_code=401, detail="Not authenticated with Google")
     
     # Generate briefing
-    briefing = await generate_briefing(req.email)
+    briefing = await generate_briefing(email)
     
     # Create email content
+    greeting = escape(str(briefing["greeting"]))
+    summary = escape(str(briefing["summary"]))
     html_content = f"""
     <html>
     <head>
@@ -63,7 +70,7 @@ async def send_briefing_email(req: BriefingRequest):
     </head>
     <body>
         <div class="container">
-            <div class="greeting">{briefing['greeting']} 🌅</div>
+            <div class="greeting">{greeting} 🌅</div>
             
             <div class="item">
                 <span class="icon">🌙</span>
@@ -81,7 +88,7 @@ async def send_briefing_email(req: BriefingRequest):
             </div>
             
             <div class="summary">
-                <p style="margin: 0;">{briefing['summary']}</p>
+                <p style="margin: 0;">{summary}</p>
             </div>
             
             <div class="footer">
@@ -94,7 +101,7 @@ async def send_briefing_email(req: BriefingRequest):
     
     # Create email message
     message = MIMEMultipart('alternative')
-    message['to'] = req.email
+    message['to'] = email
     message['subject'] = f"🌅 Your Morning Briefing - {briefing['greeting']}"
     
     # Attach HTML content
@@ -114,10 +121,10 @@ async def send_briefing_email(req: BriefingRequest):
         
         return {
             "success": True,
-            "message": f"Briefing sent to {req.email}"
+            "message": f"Briefing sent to {email}"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+        raise HTTPException(status_code=502, detail="Failed to send briefing email") from e
 
 
 async def send_briefing_email_internal(email: str) -> bool:
@@ -135,6 +142,8 @@ async def send_briefing_email_internal(email: str) -> bool:
         briefing = await generate_briefing(email)
         
         # Create email content
+        greeting = escape(str(briefing["greeting"]))
+        summary = escape(str(briefing["summary"]))
         html_content = f"""
         <html>
         <head>
@@ -149,11 +158,11 @@ async def send_briefing_email_internal(email: str) -> bool:
         </head>
         <body>
             <div class="container">
-                <div class="greeting">{briefing['greeting']} 🌅</div>
+                <div class="greeting">{greeting} 🌅</div>
                 <div class="item">🌙 Sleep Score: {briefing['sleep_score']}</div>
                 <div class="item">📧 {briefing['critical_emails']} Critical Emails</div>
                 <div class="item">✅ {briefing['tasks_count']} Tasks Today</div>
-                <div class="summary"><p style="margin: 0;">{briefing['summary']}</p></div>
+                <div class="summary"><p style="margin: 0;">{summary}</p></div>
                 <div class="footer">Powered by <strong>Equinox</strong> - Your AI Chief of Staff</div>
             </div>
         </body>

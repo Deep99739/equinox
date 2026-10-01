@@ -1,3 +1,4 @@
+import { apiFetch } from './apiClient';
 // src/api/healthApi.ts
 // API client for wellness agent health logging
 
@@ -47,7 +48,7 @@ export interface ReadinessResponse {
 }
 
 export async function logHealth(data: HealthLogInput): Promise<HealthLogResponse> {
-    const res = await fetch(`${API_BASE}/log`, {
+    const res = await apiFetch(`${API_BASE}/log`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -65,7 +66,7 @@ export async function getTodayHealth(user_email?: string): Promise<HealthLogResp
     if (user_email) {
         url += `?user_email=${encodeURIComponent(user_email)}`;
     }
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     if (res.status === 404) {
         return null; // no log yet
     }
@@ -80,7 +81,7 @@ export async function getReadiness(user_email?: string): Promise<ReadinessRespon
     if (user_email) {
         url += `?user_email=${encodeURIComponent(user_email)}`;
     }
-    const res = await fetch(url);
+    const res = await apiFetch(url);
     if (res.status === 404) {
         return null;
     }
@@ -91,7 +92,7 @@ export async function getReadiness(user_email?: string): Promise<ReadinessRespon
 }
 
 export async function getHealthHistory(days: number = 7): Promise<HealthLogResponse[]> {
-    const res = await fetch(`${API_BASE}/history?days=${days}`);
+    const res = await apiFetch(`${API_BASE}/history?days=${days}`);
     if (!res.ok) {
         throw new Error(`Failed to get health history: ${res.status}`);
     }

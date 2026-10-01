@@ -1,10 +1,10 @@
 # pydantic schemas for health endpoints
 
-from datetime import date, time
+from datetime import date as Date, time
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class HealthLogCreate(BaseModel):
@@ -12,7 +12,7 @@ class HealthLogCreate(BaseModel):
     
     user_email: Optional[str] = None
     # date - defaults to today if not provided
-    date: Optional[date] = None
+    date: Optional[Date] = None
     
     # sleep (required)
     sleep_hours: float = Field(..., ge=0, le=24)
@@ -52,7 +52,7 @@ class HealthLogResponse(BaseModel):
     
     id: UUID
     user_id: UUID
-    date: date
+    date: Date
     
     # sleep
     sleep_hours: Optional[float]
@@ -92,8 +92,7 @@ class HealthLogResponse(BaseModel):
     notes: Optional[str]
     source: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReadinessResponse(BaseModel):
@@ -115,7 +114,7 @@ class ReadinessResponse(BaseModel):
 
 
 class TrendItem(BaseModel):
-    date: date
+    date: Date
     readiness: Optional[int]
     sleep_hours: Optional[float]
     energy: Optional[int]

@@ -74,7 +74,10 @@ def create_supervisor_graph():
         }
         
         # Pass metadata to sub-agent
-        invoke_config = {"callbacks": [OpikTracer(project_name="equinox")]}
+        invoke_config = {
+            "callbacks": [OpikTracer(project_name="equinox")],
+            "configurable": {"user_id": config.get("configurable", {}).get("user_id")},
+        }
         if thread_id:
             invoke_config["metadata"] = {"thread_id": thread_id}
             
@@ -97,7 +100,10 @@ def create_supervisor_graph():
         }
         
         # Pass metadata to sub-agent
-        invoke_config = {"callbacks": [OpikTracer(project_name="equinox")]}
+        invoke_config = {
+            "callbacks": [OpikTracer(project_name="equinox")],
+            "configurable": {"user_email": state["user_id"]},
+        }
         if thread_id:
             invoke_config["metadata"] = {"thread_id": thread_id}
             

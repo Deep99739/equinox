@@ -1,8 +1,9 @@
+import { apiFetch } from './apiClient';
 // src/api/notesApi.ts
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export async function fetchNotes(user_email: string) {
-  const res = await fetch(`${API_URL}/notes/${user_email}`);
+  const res = await apiFetch(`${API_URL}/notes/${user_email}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch notes: ${res.status}`);
   }
@@ -10,7 +11,7 @@ export async function fetchNotes(user_email: string) {
 }
 
 export async function addNote(note: { user_email: string; title: string; content: string; source: string }) {
-  const res = await fetch(`${API_URL}/notes/`, {
+  const res = await apiFetch(`${API_URL}/notes/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(note),
@@ -24,8 +25,9 @@ export async function addNote(note: { user_email: string; title: string; content
 }
 
 export async function updateNote(noteId: string, updates: { title?: string; content?: string }) {
-  const res = await fetch(`${API_URL}/notes/${noteId}`, {
-    method: 'PUT',
+  const res = await apiFetch(`${API_URL}/notes/${noteId}`, {
+    method: 'PATCH',
+    keepalive: true,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates)
   });
@@ -36,7 +38,7 @@ export async function updateNote(noteId: string, updates: { title?: string; cont
 }
 
 export async function deleteNote(noteId: string) {
-  const res = await fetch(`${API_URL}/notes/${noteId}`, {
+  const res = await apiFetch(`${API_URL}/notes/${noteId}`, {
     method: 'DELETE',
   });
   if (!res.ok) {

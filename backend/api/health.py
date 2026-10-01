@@ -1,19 +1,23 @@
 # health api endpoints
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from database import get_db, HealthLog, User, UserProfile
 from schemas import HealthLogCreate, HealthLogResponse, ReadinessResponse
+from auth import get_current_email, require_owner
 
 router = APIRouter(prefix="/health", tags=["health"])
 
-# hardcoded test user for now - will add auth later
-TEST_USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+def user_id_for_email(db: Session, email: str):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user.id
 
 
 def calculate_readiness(log: HealthLog, profile: UserProfile = None) -> dict:
@@ -77,14 +81,13 @@ def calculate_readiness(log: HealthLog, profile: UserProfile = None) -> dict:
 
 
 @router.post("/log", response_model=HealthLogResponse)
-async def log_health(data: HealthLogCreate, db: Session = Depends(get_db)):
+async def log_health(data: HealthLogCreate, db: Session = Depends(get_db),
+                     current_email: str = Depends(get_current_email)):
     """log or update health data for a date"""
     
-    user_id = UUID(TEST_USER_ID)
     if data.user_email:
-        user = db.query(User).filter(User.email == data.user_email.lower()).first()
-        if user:
-            user_id = user.id
+        require_owner(data.user_email, current_email)
+    user_id = user_id_for_email(db, current_email)
             
     log_date = data.date or date.today()
     
@@ -136,14 +139,13 @@ async def log_health(data: HealthLogCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/today", response_model=HealthLogResponse)
-def get_today(user_email: Optional[str] = None, db: Session = Depends(get_db)):
+def get_today(user_email: Optional[str] = None, db: Session = Depends(get_db),
+              current_email: str = Depends(get_current_email)):
     """get today's health log"""
     
-    user_id = UUID(TEST_USER_ID)
     if user_email:
-        user = db.query(User).filter(User.email == user_email.lower()).first()
-        if user:
-            user_id = user.id
+        require_owner(user_email, current_email)
+    user_id = user_id_for_email(db, current_email)
             
     today = date.today()
     
@@ -159,31 +161,31 @@ def get_today(user_email: Optional[str] = None, db: Session = Depends(get_db)):
 
 
 @router.get("/history")
-def get_history(days: int = 7, user_email: Optional[str] = None, db: Session = Depends(get_db)):
+def get_history(days: int = Query(7, ge=1, le=365), user_email: Optional[str] = None,
+                db: Session = Depends(get_db), current_email: str = Depends(get_current_email)):
     """get health history for last N days"""
     
-    user_id = UUID(TEST_USER_ID)
     if user_email:
-        user = db.query(User).filter(User.email == user_email.lower()).first()
-        if user:
-            user_id = user.id
+        require_owner(user_email, current_email)
+    user_id = user_id_for_email(db, current_email)
             
     logs = db.query(HealthLog).filter(
-        HealthLog.user_id == user_id
+        HealthLog.user_id == user_id,
+        HealthLog.date >= date.today() - timedelta(days=days - 1),
+        HealthLog.date <= date.today(),
     ).order_by(HealthLog.date.desc()).limit(days).all()
     
     return [HealthLogResponse.model_validate(log) for log in logs]
 
 
 @router.get("/readiness", response_model=ReadinessResponse)
-def get_readiness(user_email: Optional[str] = None, db: Session = Depends(get_db)):
+def get_readiness(user_email: Optional[str] = None, db: Session = Depends(get_db),
+                  current_email: str = Depends(get_current_email)):
     """get current readiness score with breakdown"""
     
-    user_id = UUID(TEST_USER_ID)
     if user_email:
-        user = db.query(User).filter(User.email == user_email.lower()).first()
-        if user:
-            user_id = user.id
+        require_owner(user_email, current_email)
+    user_id = user_id_for_email(db, current_email)
             
     today = date.today()
     
